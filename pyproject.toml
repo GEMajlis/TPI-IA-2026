@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tpi-ia-2026"
+version = "0.1.0"
+description = "TPI IA 2026 (UTN FRC): comprensión visual de escenas"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "pillow",
+    "opencv-python",
+    "pyyaml",
+    "pydantic>=2",
+    "jsonschema>=4.18",
+    "pycocotools",
+    "pandas",
+    "scikit-learn",
+    "matplotlib",
+    "torch",
+    "transformers",
+]
+
+[project.optional-dependencies]
+# lvis-api solo se usa como referencia de AP en evaluación.
+lvis = ["lvis"]
+dev = ["pytest", "ruff"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+# pycocotools todavía usa una API de numpy deprecada; no es un problema nuestro.
+filterwarnings = ["ignore::DeprecationWarning:pycocotools.*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = ["notebooks", "data", "outputs"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]

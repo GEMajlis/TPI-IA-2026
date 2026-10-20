@@ -218,3 +218,19 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# --- TPI IA 2026 ---
+# Datos: solo se versionan los archivos normativos de la competencia
+data/*
+!data/competition/
+# Salidas de corridas
+outputs/
+# Pesos y cachés de modelos (se descargan en tiempo de ejecución)
+*.pt
+*.pth
+*.safetensors
+*.ckpt
+*.onnx
+*.gguf
+hf_cache/
+.DS_Store

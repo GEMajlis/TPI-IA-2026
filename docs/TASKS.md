@@ -1,0 +1,278 @@
+# Backlog de tareas
+
+Cada tarea tiene ID, objetivo, dependencias, entregables y criterios de aceptación. Un agente toma una tarea cuando sus dependencias están en `[x]`.
+Las **líneas** agrupan tareas que se pueden llevar en paralelo: **INF** infraestructura, **EVA** evaluación, **PER** percepción, **ESC** escena, **QA** preguntas, **LLM**, **ENT** entrega.
+
+Las referencias a campos del SceneJSON se resuelven siempre contra `data/competition/scene_schema.json`.
+
+---
+
+# ETAPA 1 — Promoción
+
+## Fundaciones
+
+### [x] E1-00 · Bootstrap del repo — INF
+- **Objetivo:** estructura de carpetas de `docs/PLAN.md §2`, `pyproject.toml` (deps: torch, transformers, pycocotools, lvis, jsonschema, pydantic, pyyaml, numpy, opencv-python, scikit-learn, pandas, matplotlib, pytest, ruff), `.gitignore` (data/dataset, outputs, pesos), README breve.
+- **Depende de:** —
+- **Aceptación:** `pip install -e ".[dev]"` funciona; `pytest` y `ruff check` corren (aunque sin tests todavía).
+- **Nota:** `lvis` quedó como extra opcional (`.[lvis]`), solo se usa como referencia de AP. Datos locales en `data/dataset/` (misma estructura que el mount de Kaggle); override `configs/kaggle.yaml`. Venv local con Python 3.12.
+
+### [x] E1-01 · Config, semillas y run_id — INF
+- **Objetivo:** `scene/config.py` con carga de YAML y overrides (`base.yaml` + `experiments/x.yaml`), `set_seed`, `run_id` (timestamp + hash corto de la config), creación de `outputs/runs/<run_id>/` y `run_manifest.json` (config completa, versiones de librerías, dispositivo).
+- **Depende de:** E1-00
+- **Aceptación:** tests de merge de overrides; misma config → mismo `config_hash`.
+- **Nota (interfaz):** `load_config(*paths, dotlist=[...])` combina YAML de izquierda a derecha y admite overrides `clave.sub=valor`; `start_run(cfg) -> RunContext` (run_id, run_dir, device, `trace_path`, `update_manifest`). `data_path(cfg, key)` resuelve rutas contra `paths.data_root`.
+
+### [x] E1-02 · Carga de datos y frontera GT — INF
+- **Objetivo:**
+  - `scene/io/dataset.py`: lista imágenes (dev y test) y vocabulario de categorías (id, nombre, sinónimos) **sin leer anotaciones de instancias**.
+  - `eval/annotations.py`: carga GT por imagen (instancias, `neg_category_ids`, `not_exhaustive_category_ids`).
+  - `tests/test_import_boundary.py`: analiza con AST que ningún módulo de `src/scene/` importe `eval` ni `eda`, ni referencie archivos de anotaciones.
+- **Depende de:** E1-00
+- **Aceptación:** el test de frontera pasa y falla si se agrega un import prohibido (testeado).
+- **Nota (interfaz):** `list_images(cfg, split)` con splits `dev` (120), `test` (60) y `benchmark` (20); las dimensiones se leen del archivo de imagen, no de la metadata de GT. `categories.csv` no trae sinónimos: `Category.synonyms` queda vacío hasta E1-08. El test de frontera además prohíbe las claves `eval`, `annotations`, `neg_category_ids` y `not_exhaustive_category_ids` en `src/scene/`, e importa todo `scene` en un subproceso para verificar que no se cargue `eval`/`eda`.
+
+### [ ] E1-03 · Lectura de archivos normativos — INF
+- **Objetivo:** leer `scene_schema.json`, `sample_submission.csv` y el benchmark de preguntas. Escribir `docs/schema_notes.md` con campos obligatorios, enums (posiciones, tamaños, relaciones), umbrales definidos, formato de `questions` / `questions_llm` / `interpreted_query`, y los tipos de pregunta y campos estructurados del benchmark con ejemplos. Implementar `scene/scene/schema.py` con validación por `jsonschema`.
+- **Depende de:** E1-00
+- **Aceptación:** el SceneJSON de ejemplo de `sample_submission.csv` valida; un JSON con un campo obligatorio faltante falla. `schema_notes.md` lista explícitamente todo lo que el schema **no** define y que el grupo debe decidir.
+
+### [x] E1-04 · RLE no comprimido column-major — INF
+- **Objetivo:** `scene/masks/rle.py` con `encode(mask) -> {"size":[H,W],"counts":[...]}` y `decode(rle) -> mask`.
+- **Depende de:** E1-00
+- **Aceptación:** round-trip exacto en máscaras aleatorias, vacías, llenas, con bordes y de 1 píxel; decodificación equivalente a `pycocotools` (`frPyObjects` sobre RLE no comprimido); los counts empiezan por la corrida de ceros (puede ser 0).
+- **Nota:** además `rle.area(rle)` sin decodificar; test contra el RLE de `sample_submission.csv`.
+
+### [x] E1-05 · Tracer — INF
+- **Objetivo:** `scene/tracing/tracer.py` con un context manager `with tracer.stage(image_id, "detection", params=...) as s:` que registre tiempos, estado, n_in/n_out, artifact_path y la excepción si la hay (sin abortar el run completo), escribiendo en `trace.jsonl`.
+- **Depende de:** E1-01
+- **Aceptación:** test con una etapa que falla: queda registrada con `status=error` y el traceback, y el pipeline sigue con la imagen siguiente.
+- **Nota (interfaz):** `tracer.stage(...)` registra y **relanza** el error (para no seguir con datos incompletos); `tracer.image_guard(image_id)` lo atrapa por imagen y el run sigue. Campo `extra` para conteos por filtro y `gpu_mem_peak_mb` si hay CUDA.
+
+### [ ] E1-06 · EDA — EVA
+- **Objetivo:** `src/eda/` más una sección de notebook. Cada gráfico responde una pregunta y termina en una decisión. Mínimo:
+  - instancias por imagen;
+  - distribución de área relativa de los objetos (porcentaje de objetos chicos);
+  - frecuencia de categorías;
+  - proporción de categorías positivas, negativas, no exhaustivas y no verificadas por imagen;
+  - superposición entre instancias (oclusión);
+  - distribución de los centroides en la grilla 3×3;
+  - tipos y objetos del benchmark de preguntas.
+- **Depende de:** E1-02
+- **Aceptación:** `docs/eda_findings.md` con 5 a 8 hallazgos, cada uno con su implicancia (por ejemplo: "X % de los objetos tiene área relativa < 1 % → evaluar tiling"). Propone los umbrales de tamaño si el schema no los fija.
+
+### [ ] E1-07 · Evaluador federado LVIS — EVA
+- **Objetivo:** `eval/lvis_federated.py`. Por imagen y categoría, matching greedy por score con IoU ≥ 0,5 (cajas o máscaras). TP/FN sobre GT anotado; FP solo en categorías negativas, o en positivas no matcheadas que **no** sean no exhaustivas; el resto se ignora. Reporta P, R, F1 y **cobertura evaluable** (fracción de predicciones que entraron en la cuenta de precisión), global, por tamaño y por frecuencia de clase.
+- **Depende de:** E1-02, E1-04
+- **Aceptación:** tests con casos sintéticos que reproducen el ejemplo horse/car/chair del enunciado; predicción perfecta → F1 = 1; salida en `metrics_detection.json` y un CSV por categoría.
+
+## Percepción
+
+### [ ] E1-08 · Vocabulario y prompts — PER
+- **Objetivo:** `detection/vocabulary.py`: limpieza de nombres, sinónimos opcionales desde el metadata de categorías, y mapeo query → category_id. Configurable (`vocab.mode: clean | synonyms`).
+- **Depende de:** E1-02
+- **Aceptación:** tests de limpieza; las 120 categorías quedan mapeadas sin colisiones.
+
+### [ ] E1-09 · Interfaz Detector + OWLv2 (línea base) — PER
+- **Objetivo:** `detection/base.py` (interfaz `detect(image) -> list[Detection]`) y `detection/owlv2.py`. Cajas en coordenadas de la imagen original (atención al padding cuadrado de OWLv2), batching de queries, `device` configurable.
+- **Depende de:** E1-08, E1-05
+- **Aceptación:** smoke test en CPU con 2 imágenes; las cajas dibujadas coinciden visualmente con los objetos (guardar una imagen de debug); se traza la etapa.
+
+### [ ] E1-10 · Post-proceso de detecciones — PER
+- **Objetivo:** `detection/postprocess.py`: umbral global (y opcional por clase), NMS por clase, NMS entre clases configurable y tope de detecciones por imagen. Cada filtro registra en la traza cuántas detecciones elimina.
+- **Depende de:** E1-09
+- **Aceptación:** tests unitarios de NMS; los parámetros salen de la config.
+
+### [ ] E1-11 · SAM2 con cajas como prompt — PER
+- **Objetivo:** `segmentation/sam2.py` (batch de cajas por imagen, multimask y selección por IoU predicho) y `segmentation/postprocess.py` (recorte a la caja con margen, componente principal, relleno de huecos).
+- **Depende de:** E1-10
+- **Aceptación:** smoke test; máscaras de debug superpuestas; `mask_score` guardado; caché de máscaras por imagen (RLE en disco).
+
+### [ ] E1-12 · Evaluación de segmentación con oráculo — EVA
+- **Objetivo:** `eval/segmentation.py`: F1 de máscaras (usando E1-07 con IoU de máscaras), mIoU de pares matcheados, y una corrida de SAM2 con **cajas GT** como prompt (oráculo, solo en eval) para separar el error de detección del de segmentación.
+- **Depende de:** E1-07, E1-11
+- **Aceptación:** tabla comparativa entre cajas predichas y cajas GT en `metrics_segmentation.json`.
+
+## Escena
+
+### [ ] E1-13 · Propiedades geométricas — ESC
+- **Objetivo:** `scene/scene/properties.py`: área, área relativa, centroide, posición 3×3 (nombres oficiales) y tamaño `small|medium|large`, calculados desde la **máscara decodificada del RLE**.
+- **Depende de:** E1-03, E1-04
+- **Aceptación:** tests con máscaras sintéticas para cada una de las 9 regiones y los bordes; máscara vacía → fallback a la caja con la marca correspondiente.
+
+### [ ] E1-14 · Color dominante — ESC
+- **Objetivo:** `scene/scene/color.py`: k-means en Lab sobre los píxeles de la máscara, mapeo a una paleta nombrada y una confianza (proporción del cluster dominante).
+- **Depende de:** E1-13
+- **Aceptación:** tests con parches de color sólido y con mezcla; paleta definida en la config.
+
+### [ ] E1-15 · Relaciones espaciales — ESC
+- **Objetivo:** `scene/scene/relations.py`: `left_of`, `right_of`, `above`, `below`, `near`, `overlaps`, `on_top_of`, con márgenes configurables, tope de pares y valores de relación del schema.
+- **Depende de:** E1-13
+- **Aceptación:** tests sintéticos por relación, incluidos casos límite (centroides alineados → sin relación horizontal).
+
+### [ ] E1-16 · Builder del SceneJSON — ESC
+- **Objetivo:** `scene/scene/builder.py`: arma el SceneJSON (imagen, objetos con ids únicos, clase, confianza, bbox, RLE, propiedades, atributos, relaciones y origen observado/derivado/desconocido) y lo valida con E1-03.
+- **Depende de:** E1-11, E1-13, E1-14, E1-15
+- **Aceptación:** el JSON valida contra el schema; imagen sin detecciones → JSON válido con lista vacía.
+
+### [ ] E1-17 · Orquestador end-to-end — INF
+- **Objetivo:** `scene/pipeline.py` y `scripts/run_pipeline.py`: recorre imágenes, corre las etapas con caché, traza y guarda el SceneJSON por imagen. Flags `--split`, `--limit` y `--from-stage`.
+- **Depende de:** E1-16, E1-05
+- **Aceptación:** corrida completa de dev en Kaggle con GPU; una segunda corrida que solo cambia el umbral reutiliza la caché de detecciones crudas.
+
+### [ ] E1-18 · Submission writer — ENT
+- **Objetivo:** `scene/io/submission.py` y `scripts/make_submission.py`: 80 filas (60 de test y 20 del benchmark), columnas `image_id,SceneJSON`, mismo orden e ids que `sample_submission.csv`, cada JSON validado.
+- **Depende de:** E1-17
+- **Aceptación:** validación completa sin errores; **hito H1** al subirlo a Kaggle y obtener un puntaje.
+
+### [ ] E1-19 · Chequeo de consistencia de la representación — EVA
+- **Objetivo:** `eval/scene_consistency.py`: verifica que el área, el centroide, la posición y el tamaño coincidan con la máscara decodificada; que las relaciones sean coherentes (simetría left/right, ids existentes); y que la evidencia apunte a ids válidos. Además mide la exactitud de posición, tamaño y color contra GT en pares matcheados.
+- **Depende de:** E1-16, E1-07
+- **Aceptación:** reporte `metrics_scene.json`; 0 inconsistencias en el run base.
+
+## Preguntas
+
+### [ ] E1-20 · DSL de consultas — QA
+- **Objetivo:** `qa/dsl.py` con los modelos pydantic del DSL (`docs/PLAN.md §3`) y el resultado (`answer`, `normalized_answer`, `evidence`, `confidence`, `status`).
+- **Depende de:** E1-03
+- **Aceptación:** cada pregunta del benchmark tiene una representación DSL escrita a mano en un fixture de tests (solo para tests, nunca para inferencia).
+
+### [ ] E1-21 · Category matcher — QA
+- **Objetivo:** `qa/category_matcher.py`: texto → category_id mediante normalización, plurales y sinónimos, con similitud de embeddings como último recurso y umbral; devuelve `None` si no hay match.
+- **Depende de:** E1-08
+- **Aceptación:** tests con plurales, sinónimos y una categoría fuera de vocabulario (→ None).
+
+### [ ] E1-22 · Ejecutor determinista — QA
+- **Objetivo:** `qa/executor.py`: ejecuta el DSL sobre el SceneJSON para todas las ops, con filtros por color, posición y tamaño, evidencia, confianza (regla del PLAN §4.5) y estados `unsupported`, `insufficient_information` y `ambiguous`. Normaliza respuestas: entero, yes/no, región oficial o etiqueta de tamaño.
+- **Depende de:** E1-20, E1-21, E1-16
+- **Aceptación:** tests por op sobre SceneJSON sintéticos, incluidos los tres estados no-ok; la evidencia siempre apunta a ids existentes.
+
+### [ ] E1-23 · Modo determinista (adapter) e integración en `questions` — QA
+- **Objetivo:** `qa/structured_adapter.py` traduce los campos estructurados del benchmark al DSL sin LLM. Integra `questions` en los SceneJSON de las 20 imágenes del benchmark, conservando `question_id`, `type` y `question`.
+- **Depende de:** E1-22, E1-18
+- **Aceptación:** las 60 consignas del benchmark (20 de descripción + 40 estructuradas, ver `docs/DECISIONS.md`) producen una respuesta o un estado explícito; el submission valida; **hito H2** si además F1 ≥ 0,40.
+
+### [ ] E1-24 · Evaluación de QA — EVA
+- **Objetivo:** `eval/qa_eval.py`:
+  - **Fidelidad:** recomputa cada respuesta desde el SceneJSON predicho y verifica que la evidencia sostenga la respuesta.
+  - **Exactitud contra GT:** construye un SceneJSON desde GT (`eval/oracle.py`, solo en eval) y corre el mismo ejecutor.
+  - Exactitud por tipo y por modo, y tasa de unsupported.
+- **Depende de:** E1-23, E1-07
+- **Aceptación:** tabla con exactitud sobre el JSON predicho y sobre el JSON oráculo por tipo de pregunta, que permite atribuir cada error a percepción o a razonamiento.
+
+## LLM
+
+### [ ] E1-25 · Carga del LLM y benchmark de recursos — LLM
+- **Objetivo:** `llm/model.py`: carga configurable (Qwen2.5-3B-Instruct o Qwen3-4B; fp16 o 4-bit), generación con semilla fija y temperatura 0. Medir memoria y latencia en T4.
+- **Depende de:** E1-01
+- **Aceptación:** tabla de memoria y latencia por candidato en `docs/DECISIONS.md` con la elección justificada.
+
+### [ ] E1-26 · Intérprete pregunta → DSL — LLM
+- **Objetivo:** `llm/interpreter.py` con prompt few-shot versionado. Recibe **solo** el texto de la pregunta, produce JSON, valida contra el DSL, reintenta una vez ante error y, si vuelve a fallar, devuelve `unsupported`. El mapeo de la categoría lo hace E1-21, no el LLM.
+- **Depende de:** E1-25, E1-20, E1-21
+- **Aceptación:** validez del JSON ≥ 95 % y coincidencia del DSL con el del modo determinista medida sobre el benchmark; casos no soportados y ambiguos incluidos en los few-shot.
+
+### [ ] E1-27 · Verbalización y descripción — LLM
+- **Objetivo:** `qa/verbalize.py` (respuesta en lenguaje natural a partir del resultado del ejecutor) y `llm/describer.py` (descripción a partir de un resumen textual compacto del SceneJSON). Verificador de fidelidad: cada categoría y número mencionado debe existir en el JSON.
+- **Depende de:** E1-25, E1-16
+- **Aceptación:** las 20 descripciones generadas, con la métrica de fidelidad calculada; se registran los casos con afirmaciones no sustentadas.
+
+### [ ] E1-28 · Integración de `questions_llm` — LLM
+- **Objetivo:** genera `questions_llm` (con `interpreted_query`) y las descripciones para las 20 imágenes del benchmark mediante intérprete → mismo ejecutor → verbalización, e integra el resultado en el submission.
+- **Depende de:** E1-26, E1-27, E1-23
+- **Aceptación:** el submission valida con `questions_llm` completo; E1-24 se extiende al modo LLM.
+
+## Experimentación, análisis y entrega
+
+### [ ] E1-29 · Ajuste de umbral con tuning/holdout — EVA
+- **Objetivo:** `scripts/tune_thresholds.py`: split fijo de 80/40 (estratificado, con semilla), barrido de umbral (y NMS entre clases) sobre la caché de detecciones crudas, selección en tuning y reporte en holdout.
+- **Depende de:** E1-07, E1-17
+- **Aceptación:** curva F1 vs. umbral guardada y valor elegido escrito en `base.yaml`, con su justificación.
+
+### [ ] E1-30 · Experimento controlado de mejora — EVA
+- **Objetivo:** al menos una comparación contra la línea base cambiando una sola variable (candidatos: sinónimos en el vocabulario, detector alternativo, NMS entre clases, umbral por clase). Registro en `outputs/experiments.csv` con hipótesis, cambio, métricas de tuning y holdout, costo y conclusión. Si hace falta, implementar el detector alternativo (`detection/yolo_world.py` o `detection/gdino.py` con chunks).
+- **Depende de:** E1-29
+- **Aceptación:** mejora sobre holdout justificada (o, si no mejora, documentada); **F1 ≥ 0,50 en dev → hito H3** junto con E1-28 y E1-31.
+
+### [ ] E1-31 · Análisis de errores y propagación — EVA
+- **Objetivo:** `eval/error_analysis.py`:
+  - Embudo de instancias a partir de las trazas (raw → umbral → NMS → SAM2 → JSON) contra el GT.
+  - Errores por tamaño y por clase.
+  - Galería de casos correctos, ambiguos y fallidos para detección, segmentación y QA.
+  - Atribución de errores de QA a percepción o a razonamiento usando el oráculo.
+- **Depende de:** E1-12, E1-24, E1-28
+- **Aceptación:** sección de notebook y `docs/error_analysis.md` con conclusiones que motivan la extensión de la Etapa 2.
+
+### [ ] E1-32 · Generador de notebook y corrida en Kaggle — ENT
+- **Objetivo:** `scripts/build_notebook.py` genera `TPI_IA_2026P_<grupo>.ipynb`: instalación, `%%writefile` de los módulos y secciones en Markdown (EDA, metodología, resultados, experimentos, análisis, submission). Separa claramente GT, predicciones y datos derivados.
+- **Depende de:** E1-31
+- **Aceptación:** corre de punta a punta en Kaggle con GPU y sin archivos externos; queda guardada con todas sus salidas; genera `submission.csv` y los CSV y JSON de métricas.
+
+### [ ] E1-33 · Reporte técnico — ENT
+- **Objetivo:** `report/REPORTE.md` con la estructura sugerida (portada, dataset, metodología, resultados, discusión y errores, conclusiones). Las tablas se generan desde los CSV del run final para garantizar correspondencia con la notebook. Declara modelos, recursos y código reutilizado.
+- **Depende de:** E1-32
+- **Aceptación:** cada número del reporte es trazable a un archivo del run final.
+
+### [ ] E1-34 · Verificación final de validez — ENT
+- **Objetivo:** checklist: el test de frontera pasa; la pipeline procesa una imagen externa al dataset sin errores; las semillas y el manifest están completos; el reporte coincide con la notebook; el submission es válido; el modelo LLM es ejecutable en Kaggle; el checklist de promoción del enunciado está cubierto punto por punto.
+- **Depende de:** E1-33
+- **Aceptación:** `docs/checklist_entrega.md` completado.
+
+---
+
+# ETAPA 2 — Sobresaliente
+
+> Arranca solo con el **hito H3** cumplido.
+
+### [ ] E2-01 · Selección de la extensión e hipótesis — EVA
+- **Objetivo:** a partir de `docs/error_analysis.md`, elegir **una** extensión (PLAN §4.9) y escribir la hipótesis cuantificable (por ejemplo: "el re-scoring con CLIP reduce los FP en categorías negativas sin bajar el recall más de 2 pts → F1 +X"), la métrica, el diseño experimental y el costo esperado.
+- **Depende de:** E1-31
+- **Aceptación:** `docs/extension.md` aprobado por el grupo antes de implementar.
+
+### [ ] E2-02a · Extensión A: re-scoring con CLIP sobre el recorte enmascarado — PER
+- **Objetivo:** módulo `detection/rescoring.py` que calcula la similitud CLIP del recorte enmascarado contra las queries del vocabulario y la combina con el score del detector (peso configurable, ajustado en tuning).
+- **Depende de:** E2-01
+- **Aceptación:** activable por config; trazado; tests básicos.
+
+### [ ] E2-02b · Extensión B: tiling tipo SAHI — PER
+- **Objetivo:** inferencia por tiles con solapamiento más la imagen completa, fusión con NMS o WBF, activable por config.
+- **Depende de:** E2-01
+- **Aceptación:** mismo formato de salida que el detector base; trazado; costo de tiempo registrado.
+
+### [ ] E2-02c · Extensión C: ensamble con WBF — PER
+- **Objetivo:** fusión de dos detectores con Weighted Boxes Fusion.
+- **Depende de:** E2-01, E1-30 (detector alternativo implementado)
+- **Aceptación:** activable por config; trazado.
+
+> Se implementa **solo** la extensión elegida en E2-01.
+
+### [ ] E2-03 · Evaluación cuantitativa del aporte — EVA
+- **Objetivo:** comparar la línea base de promoción contra la extensión sobre holdout: F1 de cajas y máscaras, desglose por tamaño y clase, efecto en la exactitud de QA (propagación), costo en tiempo y memoria. Opcional: intervalos por bootstrap sobre imágenes.
+- **Depende de:** E2-02x
+- **Aceptación:** tabla y gráficos en el notebook; fila en `experiments.csv`.
+
+### [ ] E2-04 · Análisis crítico e integración en la entrega — ENT
+- **Objetivo:** documentar qué mejora, qué limitaciones conserva y qué costo introduce; decidir con datos si la extensión entra al submission final; actualizar la notebook, el reporte y el checklist (**hito H4**).
+- **Depende de:** E2-03
+- **Aceptación:** sección "Extensión" del reporte consistente con el notebook; E1-32 a E1-34 se vuelven a correr con la versión final.
+
+---
+
+## Grafo de dependencias (resumen)
+
+```
+E1-00 → E1-01 → E1-05 ─────────────┐
+      → E1-02 → E1-06 (EDA)        │
+             → E1-07 (eval) ───────┼──────────────┐
+             → E1-08 → E1-09 → E1-10 → E1-11 → E1-12
+      → E1-03 → E1-13 → E1-14/15 → E1-16 → E1-17 → E1-18 (H1)
+      → E1-04 ┘                       └→ E1-19
+E1-03 → E1-20 ┐
+E1-08 → E1-21 ┴→ E1-22 → E1-23 (H2) → E1-24
+E1-01 → E1-25 → E1-26/27 → E1-28
+E1-17 → E1-29 → E1-30 ┐
+E1-12/24/28 → E1-31 ──┴→ E1-32 → E1-33 → E1-34 (H3)
+E1-31 → E2-01 → E2-02x → E2-03 → E2-04 (H4)
+```
+
+Desde el arranque hay cuatro frentes que se pueden trabajar en paralelo: **INF/EVA** (E1-01..07), **PER** (E1-08..11), **ESC** (E1-13..15, con máscaras sintéticas) y **QA/LLM** (E1-20..22 y E1-25, con SceneJSON sintéticos).

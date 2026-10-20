@@ -1,0 +1,26 @@
+# Configuración de la línea base. Los experimentos son overrides en configs/experiments/*.yaml.
+seed: 42
+device: auto            # auto | cpu | cuda | mps  (auto: cuda si hay, si no cpu)
+
+paths:
+  # Raíz de la fuente de datos (misma estructura que el mount de Kaggle).
+  data_root: data/dataset
+  outputs: outputs/runs
+  dev_images: development/images
+  test_images: tpi_ia_2026_competition_public/test_images
+  test_index: tpi_ia_2026_competition_public/test_images.csv
+  categories: tpi_ia_2026_competition_public/categories.csv
+  questions: tpi_2026_qa_public/questions_dev.jsonl
+  scene_schema: scene_schema.json
+  sample_submission: sample_submission.csv
+
+dataset:
+  image_extensions: [".jpg", ".jpeg", ".png"]
+
+# Solo lo usa src/eval/ (nunca la inferencia).
+eval:
+  annotations: development/annotations.json
+
+tracing:
+  trace_file: trace.jsonl
+  manifest_file: run_manifest.json
