@@ -179,6 +179,12 @@ def test_evaluacion_atribuye_percepcion_e_interpretacion(cfg) -> None:
 
     s = summarize(pd.concat([det, llm_df], ignore_index=True))
     assert s["llm"]["dsl_match_rate"] < 1 and s["llm"]["json_valid_rate"] == 1.0
+    assert s["llm"]["descriptions"] == {
+        "n": 1,
+        "faithful_rate": 1.0,
+        "template_fallback": 0,
+        "not_interpreted_as_describe": 0,
+    }
     assert s["deterministic"]["accuracy_vs_oracle"] == pytest.approx(2 / 3)
     assert s["deterministic"]["error_source"] == {"perception": 1}
 

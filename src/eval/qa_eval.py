@@ -114,6 +114,8 @@ def evaluate_mode(
         llm_q = Query.model_validate(item["interpreted_query"])
         if mode == "llm":
             row["interpreter_status"] = item.get("interpreter", {}).get("status")
+            # E1-27: estado del descriptor (ok = fiel; unfaithful = se usó la plantilla).
+            row["describer_status"] = item.get("interpreter", {}).get("describer_status")
 
             def canon(query: Query) -> tuple:
                 key = _dsl_key(query)
@@ -168,5 +170,12 @@ def summarize(df: pd.DataFrame) -> dict[str, Any]:
         if mode == "llm":
             m["json_valid_rate"] = float((g["interpreter_status"] == "ok").mean())
             m["dsl_match_rate"] = _rate(g["dsl_match"])
+            desc = g[g["type"] == "description"]
+            m["descriptions"] = {
+                "n": len(desc),
+                "faithful_rate": _rate(desc["describer_status"].eq("ok")) if len(desc) else None,
+                "template_fallback": int(desc["describer_status"].eq("unfaithful").sum()),
+                "not_interpreted_as_describe": int(desc["describer_status"].isna().sum()),
+            }
         out[mode] = m
     return out

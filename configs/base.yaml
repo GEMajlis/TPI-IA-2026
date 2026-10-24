@@ -181,7 +181,7 @@ llm:
   seed: 42
   trust_remote_code: false
   interpreter:
-    prompt_version: interpreter_v1.txt
+    prompt_version: interpreter_v2.txt  # D-18: v1 tenía ejemplos del benchmark
     max_attempts: 2
   describer:
     prompt_version: describer_v1.txt

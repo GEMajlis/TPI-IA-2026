@@ -14,7 +14,7 @@ from scene.llm.model import benchmark_llm, build_llm
 
 PROMPTS = [
     "Convertí a JSON DSL: ¿Cuántas tazas aparecen?",
-    "Convertí a JSON DSL: ¿El reloj está por encima del anillo?",
+    "Convertí a JSON DSL: ¿La lámpara está por encima de la silla?",
     "Describí brevemente: Total de objetos: 2; cup: 1; table: 1.",
 ]
 
