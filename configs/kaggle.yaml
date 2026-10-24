@@ -1,5 +1,5 @@
 # Override para correr en Kaggle: se combina con base.yaml.
 device: cuda
 paths:
-  data_root: /kaggle/input/tpi-ia-2026-primavera-comprension-visual-de-escenas
+  data_root: /kaggle/input/competitions/tpi-ia-2026-primavera-comprension-visual-de-escenas
   outputs: /kaggle/working/outputs/runs
