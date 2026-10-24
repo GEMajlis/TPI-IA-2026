@@ -46,6 +46,7 @@ ruff check . && ruff format --check .
 | E1-30 Experimentos | Umbral 0,18 adoptado (+4,7 F1 holdout); post-proceso solo en chicas descartado (D-17) | `configs/experiments/`, `scripts/compare_runs.py` |
 | E1-22 Ejecutor | Ejecuta el DSL sobre el SceneJSON con filtros, evidencia, confianza y estados `unsupported` / `insufficient_information` / `ambiguous` | `src/scene/qa/executor.py` |
 | E1-23 Modo determinista (falta Kaggle) | Benchmark → DSL sin LLM y `questions` en las 20 escenas del benchmark | `src/scene/qa/structured_adapter.py`, `scripts/run_qa.py` |
+| E1-31 Análisis de errores (falta QA) | Embudo por instancia, tipos de FP, peores clases y galería; conclusiones en [error_analysis.md](error_analysis.md) | `src/eval/error_analysis.py`, `scripts/analyze_errors.py` |
 | E1-10 Post-proceso | Umbral, NMS por clase, NMS entre clases (apagado) y tope, con conteos en la traza | `src/scene/detection/postprocess.py` |
 
 **Resultados en Kaggle (120 imágenes de dev):**
