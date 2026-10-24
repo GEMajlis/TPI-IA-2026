@@ -23,11 +23,12 @@ Formato: fecha · decisión · alternativa descartada · evidencia. Las entradas
 - `scene_schema.json` restringe `relations[].predicate` a `left_of, right_of, above, below, overlaps`. PLAN §4.3 y E1-15 incluyen `near` y `on_top_of`: si se guardan en `relations`, el JSON **no valida**.
 - **Propuesta:** guardar en `relations` solo los cinco predicados del schema y, si se implementan, poner `near` / `on_top_of` en un campo propio (por ejemplo `extra_relations`), que el schema admite (`additionalProperties: true`).
 
-### D-05 · **pendiente (E1-20)** · Benchmark de 60 consignas, sin preguntas de atributo
+### D-05 · **resuelta (E1-20, E1-21)** · Benchmark de 60 consignas, sin preguntas de atributo
 - `questions_dev.jsonl` tiene 60 consignas sobre 20 imágenes: `description` 20, `count` 10, `existence` 10, `relation` 10, `position` 5, `size` 5. TASKS hablaba de 40 preguntas (se corrigió en E1-23).
 - No hay preguntas de color/atributo: la op `attribute` del DSL no se evalúa en el benchmark (se puede mantener, pero no es prioritaria).
 - Las preguntas están en **español** (`class_es`) y traen el campo estructurado `class_en` con el nombre del vocabulario. En modo LLM solo se recibe el texto: el category matcher (E1-21) tiene que mapear nombres en español (necesita un léxico es→en del vocabulario).
 - Las relaciones del benchmark se formulan con instancias en singular ("¿La instancia de X está por encima de la instancia de Y?").
+- **Resolución:** el DSL conserva la op `attribute` (sin prioridad en el ejecutor). El matcher usa un léxico es→en manual (`configs/lexicon_es.yaml`) que resuelve las 50 clases en español del benchmark. El predicado de las relaciones lo extrae del texto el adapter (E1-23) o el LLM (E1-26).
 
 ### D-06 · **propuesta (E1-06)** · El schema no fija umbrales de tamaño
 - `size` es `small | medium | large` sin umbrales. Propuesta del EDA (H2): `area_ratio` < 0,333 % → small, < 3 % → medium, si no large (COCO 32²/96² px sobre 640×480). Queda en `scene.size_thresholds`; si el enunciado define otros, se cambian ahí.
@@ -74,3 +75,19 @@ Formato: fecha · decisión · alternativa descartada · evidencia. Las entradas
 
 No se completan E1-25/E1-26/E1-27 hasta reemplazar estos pendientes por mediciones reales,
 validar al menos 95 % del JSON sobre el benchmark e inspeccionar las 20 descripciones de E1-16.
+
+## 2026-10-24 · E1-20 y E1-21
+
+### D-13 · Léxico español manual y LaBSE como último recurso del category matcher
+- **Decisión:** el orden es nombre → léxico español → sinónimos LVIS → embeddings. El léxico (`configs/lexicon_es.yaml`) es una traducción manual de las 120 categorías con variantes regionales (heladera/nevera, celular/móvil, etc.). Para el fallback se usa `sentence-transformers/LaBSE` con umbral de similitud coseno **0,90**. El modelo se carga recién cuando el léxico no alcanza.
+- **Alternativas:** `paraphrase-multilingual-MiniLM-L12-v2` y `intfloat/multilingual-e5-small`. Se descartan porque mezclan mucho las distribuciones de positivos y negativos.
+- **Evidencia** (`scripts/calibrate_matcher.py`: 18 términos dentro del vocabulario que el léxico no resuelve y 22 términos fuera del vocabulario):
+
+  | Modelo | Similitud máx. de un negativo | Falsos positivos con 0,90 | Aciertos | Categoría errónea |
+  |---|---|---|---|---|
+  | LaBSE | 0,887 ("puerta" → doorknob) | 0 / 22 | 5 / 18 | 1 ("gorro" → baseball cap) |
+  | MiniLM-L12 multilingüe | 0,959 ("puerta" → doorknob) | 3 / 22 | 3 / 18 | 1 |
+  | multilingual-e5-small | 0,939 | 15 / 22 | 11 / 18 | 4 |
+
+  El umbral prioriza la precisión: preferimos `unsupported` antes que contestar sobre otra categoría. El fallback recupera poco (5 de 18), así que la cobertura en español depende sobre todo del léxico.
+- **Limitación:** el léxico incluye las traducciones que usa el benchmark (`class_es`), porque son las traducciones naturales. Por eso la cobertura del 100 % sobre el benchmark está sobreestimada para preguntas redactadas de otra forma. La muestra de calibración es chica (40 términos).

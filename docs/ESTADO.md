@@ -17,7 +17,7 @@ ruff check . && ruff format --check .
 
 **Regla de oro (motivo de desaprobación):** el GT solo se lee desde `src/eval/` y `src/eda/`. Nada en `src/scene/` puede importarlos ni tocar anotaciones. Lo verifica `tests/test_import_boundary.py`; no lo desactiven. Las demás reglas de trabajo están en [CLAUDE.md](../CLAUDE.md).
 
-## Qué hicimos (Etapa 1: 16 de 35 tareas, y E1-17/E1-18 con el código listo)
+## Qué hicimos (Etapa 1: 19 de 35 tareas, y E1-17/E1-18 con el código listo)
 
 | Tarea | Qué quedó | Dónde |
 |---|---|---|
@@ -41,6 +41,8 @@ ruff check . && ruff format --check .
 | E1-19 Consistencia | Chequeo del SceneJSON contra su máscara y exactitud de posición/tamaño/color contra GT | `src/eval/scene_consistency.py`, `scripts/run_eval.py` |
 | E1-12 Oráculo de segmentación (falta Kaggle) | SAM2 con cajas GT: separa el error de SAM2 del del detector | `src/eval/segmentation.py`, `scripts/eval_segmentation.py` |
 | E1-29 Ajuste de umbral (falta Kaggle) | Barrido de umbral y NMS entre clases en tuning (80) / holdout (40) | `src/eval/tuning.py`, `scripts/tune_thresholds.py` |
+| E1-20 DSL | Modelos pydantic de la consulta y del resultado; fixture con el DSL de las 60 consignas del benchmark | `src/scene/qa/dsl.py` |
+| E1-21 Category matcher | Texto en inglés o español → categoría: nombre, plurales, léxico español, sinónimos LVIS y LaBSE como último recurso (D-13) | `src/scene/qa/category_matcher.py`, `configs/lexicon_es.yaml` |
 | E1-10 Post-proceso | Umbral, NMS por clase, NMS entre clases (apagado) y tope, con conteos en la traza | `src/scene/detection/postprocess.py` |
 
 **Línea base de detección en Kaggle (120 imágenes de dev, umbral 0,1 sin ajustar):** P = 0,52, R = 0,71, **F1 de cajas = 0,60**, cobertura evaluable 35 %. Ya supera el 0,50 de promoción. El punto débil es la precisión (~57 predicciones por imagen contra ~15 de GT): el ajuste de umbral (E1-29) debería mejorarla. **Línea base de segmentación en Kaggle (SAM2.1 hiera-large sobre esas cajas):** P = 0,47, R = 0,64, **F1 de máscaras = 0,54**. Se pierden 124 de los 1264 TP de cajas (~10 %) porque la máscara no llega a IoU 0,5: E1-12 (oráculo con cajas GT) dirá si es error de SAM2 o del post-proceso.
@@ -74,7 +76,7 @@ La idea es armar primero un **corte vertical mínimo** y probarlo en Kaggle con 
 4. **Primer envío (hito H1):** en Kaggle, `python scripts/run_pipeline.py --config configs/base.yaml configs/kaggle.yaml --split test benchmark` y después `python scripts/make_submission.py --config configs/base.yaml configs/kaggle.yaml --run latest --out /kaggle/working/submission.csv`. El código de E1-16, E1-17 y E1-18 ya está.
 
 En paralelo, porque no dependen de los modelos (se trabajan con SceneJSON sintéticos):
-- **E1-20, E1-21 y E1-22:** DSL, category matcher y ejecutor determinista. El matcher tiene que entender nombres en español.
+- ~~**E1-20 y E1-21:** DSL y category matcher.~~ Hecho. Sigue **E1-22**, el ejecutor determinista.
 - **E1-25:** carga del LLM y benchmark de memoria y latencia en T4.
 
 ## Qué queda por hacer

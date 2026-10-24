@@ -97,6 +97,19 @@ scene:
     contact_px: 3           # dilatación para considerar que dos máscaras se tocan
     max_relations: 20000    # tope del schema; se priorizan los pares de mayor confianza
 
+qa:
+  matcher:
+    # Texto de categoría → category_id: nombre, léxico español, sinónimos LVIS y, por último,
+    # embeddings (E1-21). Ruta relativa al directorio de trabajo, como vocab.synonyms_cache.
+    lexicon_es: configs/lexicon_es.yaml
+    lvis_synonyms: true       # usa vocab.lvis_categories_url / vocab.synonyms_cache
+    embeddings:
+      enabled: true           # el modelo se carga recién si el léxico no alcanza
+      model_id: sentence-transformers/LaBSE
+      # D-13: en la calibración, el negativo más alto dio 0,887 ("puerta" → doorknob).
+      threshold: 0.9
+      batch_size: 64
+
 # Solo lo usa src/eval/ y src/eda/ (nunca la inferencia).
 eval:
   annotations: development/annotations.json

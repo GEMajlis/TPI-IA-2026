@@ -147,15 +147,17 @@ Las referencias a campos del SceneJSON se resuelven siempre contra `data/competi
 
 ## Preguntas
 
-### [ ] E1-20 · DSL de consultas — QA
+### [x] E1-20 · DSL de consultas — QA
 - **Objetivo:** `qa/dsl.py` con los modelos pydantic del DSL (`docs/PLAN.md §3`) y el resultado (`answer`, `normalized_answer`, `evidence`, `confidence`, `status`).
 - **Depende de:** E1-03
 - **Aceptación:** cada pregunta del benchmark tiene una representación DSL escrita a mano en un fixture de tests (solo para tests, nunca para inferencia).
+- **Nota (interfaz):** `Query(op, target, target2, relation, attribute, output_type, reason)` con `Target(category: str, filters: Filters(color, position, size))`; `extra="forbid"` y validación cruzada (`relation`/`target2` solo con `op="relation"`, `attribute` solo con `op="attribute"`, `output_type` se completa desde la op y tiene que coincidir). Se agregó la op `unsupported` (con `reason`) para que el intérprete LLM (E1-26) pueda rechazar preguntas que no entran en ninguna op. `QueryResult(answer, normalized_answer, evidence, confidence, status, detail)` y `to_question_answer(question_id, type, question, query=None)` arman el item de `questions` (o de `questions_llm`, con `interpreted_query`) más los campos propios `status` y `status_detail`. Mapeos `QUESTION_TYPE_TO_OP` y `ANSWER_FORMAT_TO_OUTPUT`. Fixture: `tests/fixtures/benchmark_dsl.json` (60 consignas; el test controla op, formato, categorías y que el predicado coincida con la frase del texto).
 
-### [ ] E1-21 · Category matcher — QA
+### [x] E1-21 · Category matcher — QA
 - **Objetivo:** `qa/category_matcher.py`: texto → category_id mediante normalización, plurales y sinónimos, con similitud de embeddings como último recurso y umbral; devuelve `None` si no hay match.
 - **Depende de:** E1-08
 - **Aceptación:** tests con plurales, sinónimos y una categoría fuera de vocabulario (→ None).
+- **Nota (interfaz):** `CategoryMatcher(categories, lexicon, synonyms, embedder, embedding_threshold).match(text) -> CategoryMatch(category_id, category_name, method, score, matched_text) | None` (y `match_id`); `matcher_from_config(cfg, categories, device)` lee `qa.matcher`. Para cada forma del texto (tal cual y después en singular, en inglés y en español, palabra por palabra) busca nombre → léxico español (`configs/lexicon_es.yaml`, traducción manual de las 120 categorías) → sinónimos LVIS; un texto que apunta a dos categorías dentro de un nivel se descarta (`dropped`). Último recurso: LaBSE con umbral 0,90 (D-13), cargado recién en el primer uso. Las 50 clases en español del benchmark se resuelven por léxico. `scripts/calibrate_matcher.py` deja la calibración en `outputs/matcher/`.
 
 ### [ ] E1-22 · Ejecutor determinista — QA
 - **Objetivo:** `qa/executor.py`: ejecuta el DSL sobre el SceneJSON para todas las ops, con filtros por color, posición y tamaño, evidencia, confianza (regla del PLAN §4.5) y estados `unsupported`, `insufficient_information` y `ambiguous`. Normaliza respuestas: entero, yes/no, región oficial o etiqueta de tamaño.
