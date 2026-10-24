@@ -102,10 +102,11 @@ Las referencias a campos del SceneJSON se resuelven siempre contra `data/competi
 
 ## Escena
 
-### [ ] E1-13 · Propiedades geométricas — ESC
+### [x] E1-13 · Propiedades geométricas — ESC
 - **Objetivo:** `scene/scene/properties.py`: área, área relativa, centroide, posición 3×3 (nombres oficiales) y tamaño `small|medium|large`, calculados desde la **máscara decodificada del RLE**.
 - **Depende de:** E1-03, E1-04
 - **Aceptación:** tests con máscaras sintéticas para cada una de las 9 regiones y los bordes; máscara vacía → fallback a la caja con la marca correspondiente.
+- **Nota (interfaz):** `properties_from_mask(mask, small_max, medium_max, source)` / `properties_from_rle(...)` / `properties_from_config(mask, cfg)` → `GeometricProperties` (`area`, `area_ratio`, `centroid` [x, y], `position`, `size`, `mask_bbox` xyxy exclusivo, `source`). Para máscaras vacías, `ensure_nonempty(mask, box)` devuelve la caja rasterizada (al menos 1 px) con `source="box_fallback"`: el builder (E1-16) debe guardar **esa** máscara en el RLE, así `area_ratio > 0` y las propiedades coinciden con la máscara entregada. Convenciones de `docs/schema_notes.md` §6; `size_label` usa los mismos cortes que `eval.lvis_federated.size_label`.
 
 ### [ ] E1-14 · Color dominante — ESC
 - **Objetivo:** `scene/scene/color.py`: k-means en Lab sobre los píxeles de la máscara, mapeo a una paleta nombrada y una confianza (proporción del cluster dominante).
