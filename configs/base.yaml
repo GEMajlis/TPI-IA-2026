@@ -48,6 +48,18 @@ detection:
     iou: 0.8
   max_detections: 100       # tope por imagen (EDA: máx. 66 instancias GT; schema admite 300)
 
+segmentation:
+  model_id: facebook/sam2.1-hiera-large
+  multimask_output: true    # 3 máscaras por caja; queda la de mayor IoU predicho
+  box_batch_size: 32        # cajas por pasada del decoder (el embedding de imagen se reutiliza)
+  mask_threshold: 0.0       # umbral sobre los logits de SAM2
+  postprocess:
+    crop_to_box: true
+    box_margin: 0.1         # fracción del ancho/alto de la caja
+    largest_component: true
+    fill_holes: true
+    max_hole_ratio: 0.05    # huecos de hasta 5 % del área de la máscara
+
 scene:
   # Umbrales de tamaño sobre area_ratio (el schema no los fija; ver docs/eda_findings.md).
   # Equivalen a 32² y 96² px (convención COCO) sobre una imagen de referencia de 640×480.

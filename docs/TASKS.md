@@ -89,10 +89,11 @@ Las referencias a campos del SceneJSON se resuelven siempre contra `data/competi
 - **Aceptación:** tests unitarios de NMS; los parámetros salen de la config.
 - **Nota (interfaz):** `postprocess(dets, cfg["detection"]) -> PostprocessResult(detections, counts)`; `counts` = sobrevivientes por paso (`raw`, `threshold`, `nms_per_class`, [`nms_cross_class`], `max_detections`) y va a `extra.counts` de la traza. NMS en numpy (sin torchvision). Umbral inicial 0,1 (se ajusta en E1-29); NMS entre clases apagado (D-09).
 
-### [ ] E1-11 · SAM2 con cajas como prompt — PER
+### [x] E1-11 · SAM2 con cajas como prompt — PER
 - **Objetivo:** `segmentation/sam2.py` (batch de cajas por imagen, multimask y selección por IoU predicho) y `segmentation/postprocess.py` (recorte a la caja con margen, componente principal, relleno de huecos).
 - **Depende de:** E1-10
 - **Aceptación:** smoke test; máscaras de debug superpuestas; `mask_score` guardado; caché de máscaras por imagen (RLE en disco).
+- **Nota (interfaz):** `Sam2Segmenter.segment(image, dets) -> list[SegmentedObject]` y `build_segmenter(cfg, device)` en `segmentation/sam2.py`; `SegmentedObject` suma `raw_area` (píxeles antes del post-proceso). El embedding de imagen se calcula una vez y las cajas van en lotes de `box_batch_size`. Caché `masks/<image_id>.json` con RLE (`save_segmented`/`load_segmented`). `postprocess_mask` con pasos apagables desde `segmentation.postprocess`. `scripts/run_segmentation.py --from-run <run|latest>` reutiliza las detecciones de `run_detection.py` y con `--eval` da F1 de cajas y de máscaras. Requiere `torchvision` (lo pide el procesador de SAM2 en `transformers`). Los checkpoints `facebook/sam2.1-*` son de video y avisan al cargarse en `Sam2Model`: es lo esperado. Smoke test en CPU con `hiera-tiny`, 2 imágenes: ~9 s/imagen, F1 de máscaras 0,59.
 
 ### [ ] E1-12 · Evaluación de segmentación con oráculo — EVA
 - **Objetivo:** `eval/segmentation.py`: F1 de máscaras (usando E1-07 con IoU de máscaras), mIoU de pares matcheados, y una corrida de SAM2 con **cajas GT** como prompt (oráculo, solo en eval) para separar el error de detección del de segmentación.

@@ -17,7 +17,7 @@ ruff check . && ruff format --check .
 
 **Regla de oro (motivo de desaprobación):** el GT solo se lee desde `src/eval/` y `src/eda/`. Nada en `src/scene/` puede importarlos ni tocar anotaciones. Lo verifica `tests/test_import_boundary.py`; no lo desactiven. Las demás reglas de trabajo están en [CLAUDE.md](../CLAUDE.md).
 
-## Qué hicimos (Etapa 1: 11 de 35 tareas)
+## Qué hicimos (Etapa 1: 12 de 35 tareas)
 
 | Tarea | Qué quedó | Dónde |
 |---|---|---|
@@ -31,9 +31,10 @@ ruff check . && ruff format --check .
 | E1-07 Evaluador | P, R y F1 federados LVIS (cajas y máscaras), por tamaño, frecuencia y categoría | `src/eval/lvis_federated.py` |
 | E1-08 Vocabulario | Nombres limpios y sinónimos LVIS opcionales (120 o 215 queries) | `src/scene/detection/vocabulary.py` |
 | E1-09 OWLv2 | Detector base con caché de detecciones crudas e imágenes de debug | `src/scene/detection/owlv2.py`, `scripts/run_detection.py` |
+| E1-11 SAM2 | Máscaras con las cajas como prompt, post-proceso y caché RLE; F1 de máscaras | `src/scene/segmentation/`, `scripts/run_segmentation.py` |
 | E1-10 Post-proceso | Umbral, NMS por clase, NMS entre clases (apagado) y tope, con conteos en la traza | `src/scene/detection/postprocess.py` |
 
-OWLv2 ya corre de punta a punta en CPU (smoke test: 2 imágenes de dev, ~12 s por imagen, F1 de cajas 0,65 en esa muestra chica). Falta la primera corrida completa en Kaggle.
+**Línea base de detección en Kaggle (120 imágenes de dev, umbral 0,1 sin ajustar):** P = 0,52, R = 0,71, **F1 de cajas = 0,60**, cobertura evaluable 35 %. Ya supera el 0,50 de promoción. El punto débil es la precisión (~57 predicciones por imagen contra ~15 de GT): el ajuste de umbral (E1-29) debería mejorarla. SAM2 corre en CPU (smoke test con `hiera-tiny`); falta la corrida completa con `hiera-large` en Kaggle.
 
 ## Lo más importante que aprendimos
 
@@ -52,8 +53,8 @@ OWLv2 ya corre de punta a punta en CPU (smoke test: 2 imágenes de dev, ~12 s po
 La idea es armar primero un **corte vertical mínimo** y probarlo en Kaggle con GPU, antes de completar escena y QA. El riesgo principal es que los modelos no rindan o no entren en la T4, y el primer F1 real define en qué conviene invertir tiempo.
 
 1. ~~**E1-09 y E1-10 · Detector OWLv2 y post-proceso.**~~ Hecho.
-2. **Primera corrida en Kaggle:** `python scripts/run_detection.py --config configs/base.yaml configs/kaggle.yaml --split dev --eval` (120 imágenes de dev y F1 de cajas). Ahí sabemos qué tan lejos estamos del 0,50.
-3. **E1-11 y E1-13 · SAM2 y propiedades básicas** (centroide, área, posición, tamaño), lo que habilita el F1 de máscaras.
+2. ~~**Primera corrida en Kaggle.**~~ Hecho: F1 de cajas 0,60.
+3. **SAM2 en Kaggle:** `python scripts/run_segmentation.py --config configs/base.yaml configs/kaggle.yaml --from-run latest --eval` (F1 de máscaras). Después, **E1-13 · propiedades básicas** (centroide, área, posición, tamaño).
 4. **E1-16, E1-17 y E1-18 en versión mínima:** builder, orquestador y submission, para subir a Kaggle y obtener el primer puntaje (**hito H1**).
 
 En paralelo, porque no dependen de los modelos (se trabajan con SceneJSON sintéticos):
