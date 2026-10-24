@@ -150,6 +150,10 @@ eval:
   annotations: development/annotations.json
   iou_thr: 0.5
   centroid_decimals: 2     # tolerancia del chequeo de centroides (el builder redondea a 2)
+  error_analysis:
+    localization_min_iou: 0.1  # FP con IoU en [0,1; 0,5) contra GT de su clase = mala localización
+    gallery_per_group: 4       # imágenes por grupo (correctas, ambiguas, fallidas)
+    worst_classes_min_gt: 5    # mínimo de instancias GT para listar una clase como de las peores
   # Bins de frecuencia por cantidad de imágenes donde la categoría es positiva (EDA: 3 a 11).
   frequency_bins:
     rare_max: 4
