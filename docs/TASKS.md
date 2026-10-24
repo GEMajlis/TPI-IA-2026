@@ -133,11 +133,17 @@ Las referencias a campos del SceneJSON se resuelven siempre contra `data/competi
 - **Aceptación:** corrida completa de dev en Kaggle con GPU; una segunda corrida que solo cambia el umbral reutiliza la caché de detecciones crudas.
 - **Nota (interfaz):** corrida completa de dev en Kaggle (120 imágenes, 0 errores, mismos F1 que las corridas por etapa). `Pipeline(cfg, ctx, tracer, vocab, make_detector, make_segmenter, from_stage, debug).run(images)` en `scene/pipeline.py`; los modelos se cargan solo si hay algo que no está en caché. Caché compartida entre runs en `paths.cache`, con clave = hash de la config de la etapa y las anteriores (`stage_keys`): cambiar el umbral reutiliza las detecciones crudas; cambiar relaciones o color reutiliza también las máscaras (testeado con modelos falsos). Traza con `status=cached`. `scripts/run_pipeline.py` admite `--split` con varios splits, `--images`, `--limit`, `--from-stage`, `--debug` y `--eval`. `start_run` ahora agrega un sufijo si el `run_id` ya existe. Probado en CPU sobre una imagen externa al dataset.
 
-### [ ] E1-18 · Submission writer — ENT
+### [x] E1-18 · Submission writer — ENT
 - **Objetivo:** `scene/io/submission.py` y `scripts/make_submission.py`: 80 filas (60 de test y 20 del benchmark), columnas `image_id,SceneJSON`, mismo orden e ids que `sample_submission.csv`, cada JSON validado.
 - **Depende de:** E1-17
 - **Aceptación:** validación completa sin errores; **hito H1** al subirlo a Kaggle y obtener un puntaje.
-- **Nota (interfaz):** submission completo generado en Kaggle (80 filas válidas, 15,4 MB, con `questions` y `questions_llm`); **falta subirlo y anotar el puntaje (H1)**. `build_submission(scenes, cfg) -> (rows, errors)`, `write_submission`, `read_submission` en `scene/io/submission.py`. `scripts/make_submission.py --run <run|latest> [...]` junta escenas de varios runs, valida las 80 filas y no escribe nada si alguna falla. Testeado con las 80 filas de `sample_submission.csv`.
+- **Nota (interfaz):** submission completo generado y aceptado por Kaggle el 2026-10-24
+  (80 filas válidas, 15,4 MB, con `questions` y `questions_llm`), `PipelineScore = 0.6509`;
+  **hito H1 cumplido**. `build_submission(scenes, cfg) -> (rows, errors)`, `write_submission`,
+  `read_submission` en `scene/io/submission.py`.
+  `scripts/make_submission.py --run <run|latest> [...]` junta escenas de varios runs, valida las
+  80 filas y no escribe nada si alguna falla.
+  Testeado con las 80 filas de `sample_submission.csv`.
 
 ### [x] E1-19 · Chequeo de consistencia de la representación — EVA
 - **Objetivo:** `eval/scene_consistency.py`: verifica que el área, el centroide, la posición y el tamaño coincidan con la máscara decodificada; que las relaciones sean coherentes (simetría left/right, ids existentes); y que la evidencia apunte a ids válidos. Además mide la exactitud de posición, tamaño y color contra GT en pares matcheados.

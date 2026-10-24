@@ -6,11 +6,10 @@ Resumen para el grupo: qué está hecho, qué resultados tenemos y qué falta. E
 
 ## Dónde estamos
 
-**Etapa 1 (promoción): 31 de 35 tareas.** La pipeline completa corre en Kaggle de punta a punta (detección → SAM2 → SceneJSON → preguntas en modo determinista y con LLM) y el `submission.csv` completo ya está generado. Falta **subirlo** y armar la **entrega** (notebook, reporte y checklist).
+**Etapa 1 (promoción): 32 de 35 tareas.** La pipeline completa corre en Kaggle de punta a punta (detección → SAM2 → SceneJSON → preguntas en modo determinista y con LLM). El `submission.csv` fue aceptado con `PipelineScore = 0.6509` (**H1 cumplido**). Falta armar la **entrega** (notebook, reporte y checklist).
 
 | Pendiente | Qué falta | Quién |
 |---|---|---|
-| **E1-18 · Envío (hito H1)** | Subir `/kaggle/working/submission.csv` a la competencia y anotar el puntaje | grupo |
 | **E1-32 · Notebook de Kaggle** | `TPI_IA_2026P_<grupo>` que corra de punta a punta sin archivos externos, con secciones en Markdown y todas las salidas guardadas | a repartir |
 | **E1-33 · Reporte técnico** | `report/REPORTE.md` (portada, dataset, metodología, resultados, discusión y errores, conclusiones); cada número sale del run final | a repartir |
 | **E1-34 · Checklist final** | Condiciones de validez y checklist de promoción, punto por punto | a repartir |
@@ -44,7 +43,7 @@ Resumen para el grupo: qué está hecho, qué resultados tenemos y qué falta. E
 
 Los 11 errores son de **percepción** (conteos con instancias de más o de menos, una existencia alucinada y 4 objetos no detectados); el LLM no agrega errores de interpretación (E1-24).
 
-**Submission:** 80 filas válidas, 2271 objetos, 164 796 relaciones, 15,4 MB, con `questions` y `questions_llm`.
+**Submission:** 80 filas válidas, 2271 objetos, 164 796 relaciones, 15,4 MB, con `questions` y `questions_llm`. Aceptado por Kaggle el 2026-10-24 con **`PipelineScore = 0.6509`** (H1).
 
 ## Experimentos controlados (una variable cada uno, decididos con el holdout)
 
@@ -66,6 +65,7 @@ Los 11 errores son de **percepción** (conteos con instancias de más o de menos
 | Manejo explícito de preguntas ambiguas, no soportadas o sin información | ✅ estados `ambiguous`, `unsupported`, `insufficient_information` |
 | Tracing completo usado para analizar la propagación de errores | ✅ `trace.jsonl` por etapa y embudo de E1-31 |
 | Mejora justificada contra una línea base | ✅ tabla de experimentos |
+| Submission válido evaluado por Kaggle | ✅ `PipelineScore = 0.6509` (H1) |
 | Notebook, reporte y defensa | ⏳ E1-32, E1-33, E1-34 |
 
 ## Cómo correr todo en Kaggle
@@ -103,7 +103,7 @@ ruff check . && ruff format --check .
 
 ## Pendientes del grupo
 
-- [ ] **Subir el submission** y anotar el puntaje acá.
+- [x] **Subir el submission** y anotar el puntaje: `PipelineScore = 0.6509`.
 - [ ] **Definir el número de grupo** (nombre de la notebook: `TPI_IA_2026P_<grupo>`).
 - [ ] **Decidir si el repo de GitHub es público.** Si lo es, la notebook final puede clonarlo (es un recurso público que descarga la propia notebook). Si es privado, E1-32 tiene que meter el código en la notebook con `%%writefile`.
 - [ ] **Repartir E1-32, E1-33 y E1-34.**
@@ -121,7 +121,7 @@ ruff check . && ruff format --check .
 | E1-12 · Oráculo de segmentación | SAM2 con cajas GT para separar el error de SAM2 del detector | `src/eval/segmentation.py`, `scripts/eval_segmentation.py` |
 | E1-13 a E1-16 · Escena | Propiedades, color, relaciones y builder del SceneJSON con origen por campo | `src/scene/scene/` |
 | E1-17 · Orquestador | Pipeline completa con caché por etapa y traza; acepta imágenes sueltas | `src/scene/pipeline.py`, `scripts/run_pipeline.py` |
-| E1-18 · Submission | 80 filas validadas en el orden del sample (falta subirlo) | `src/scene/io/submission.py`, `scripts/make_submission.py` |
+| E1-18 · Submission | 80 filas validadas y aceptadas por Kaggle; `PipelineScore = 0.6509` (H1) | `src/scene/io/submission.py`, `scripts/make_submission.py` |
 | E1-19 · Consistencia | Chequeo del SceneJSON contra su máscara y exactitud de atributos contra GT | `src/eval/scene_consistency.py`, `scripts/run_eval.py` |
 | E1-20 a E1-23 · QA determinista | DSL, category matcher en español, ejecutor y `questions` | `src/scene/qa/`, `scripts/run_qa.py` |
 | E1-24 · Evaluación de QA | Oráculo desde GT, fidelidad de la evidencia y atribución de errores | `src/eval/qa_eval.py`, `src/eval/oracle.py`, `scripts/eval_qa.py` |
