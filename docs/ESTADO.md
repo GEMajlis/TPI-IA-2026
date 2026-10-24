@@ -39,6 +39,8 @@ ruff check . && ruff format --check .
 | E1-17 Orquestador (falta Kaggle) | Pipeline completa con caché por etapa y traza; acepta imágenes sueltas | `src/scene/pipeline.py`, `scripts/run_pipeline.py` |
 | E1-18 Submission (falta envío) | 80 filas en el orden del sample, todas validadas | `src/scene/io/submission.py`, `scripts/make_submission.py` |
 | E1-19 Consistencia | Chequeo del SceneJSON contra su máscara y exactitud de posición/tamaño/color contra GT | `src/eval/scene_consistency.py`, `scripts/run_eval.py` |
+| E1-12 Oráculo de segmentación (falta Kaggle) | SAM2 con cajas GT: separa el error de SAM2 del del detector | `src/eval/segmentation.py`, `scripts/eval_segmentation.py` |
+| E1-29 Ajuste de umbral (falta Kaggle) | Barrido de umbral y NMS entre clases en tuning (80) / holdout (40) | `src/eval/tuning.py`, `scripts/tune_thresholds.py` |
 | E1-10 Post-proceso | Umbral, NMS por clase, NMS entre clases (apagado) y tope, con conteos en la traza | `src/scene/detection/postprocess.py` |
 
 **Línea base de detección en Kaggle (120 imágenes de dev, umbral 0,1 sin ajustar):** P = 0,52, R = 0,71, **F1 de cajas = 0,60**, cobertura evaluable 35 %. Ya supera el 0,50 de promoción. El punto débil es la precisión (~57 predicciones por imagen contra ~15 de GT): el ajuste de umbral (E1-29) debería mejorarla. **Línea base de segmentación en Kaggle (SAM2.1 hiera-large sobre esas cajas):** P = 0,47, R = 0,64, **F1 de máscaras = 0,54**. Se pierden 124 de los 1264 TP de cajas (~10 %) porque la máscara no llega a IoU 0,5: E1-12 (oráculo con cajas GT) dirá si es error de SAM2 o del post-proceso.
