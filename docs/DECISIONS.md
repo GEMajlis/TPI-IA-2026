@@ -71,8 +71,8 @@ Formato: fecha · decisión · alternativa descartada · evidencia. Las entradas
 
 | Candidato | Precisión | Memoria de carga (MiB) | Latencia media (ms) | p95 (ms) | Decisión |
 |---|---:|---:|---:|---:|---|
-| Qwen2.5-3B-Instruct | fp16 | 5994 | 5331 | 7310 | **elegido** |
-| Qwen3-4B | 4-bit NF4 | 2601 | 10928 | 16995 | descartado |
+| Qwen2.5-3B-Instruct | fp16 | 5994 | 5640 | 7835 | **elegido** |
+| Qwen3-4B | 4-bit NF4 | 2601 | 11471 | 17813 | descartado |
 
 Medido en Tesla T4 (torch 2.11, Python 3.13), 3 prompts, 1 calentamiento + 3 repeticiones,
 ~125–134 tokens de salida (`outputs/llm_benchmark.json` del run de Kaggle).
@@ -112,11 +112,11 @@ Medido en Tesla T4 (torch 2.11, Python 3.13), 3 prompts, 1 calentamiento + 3 rep
 ### D-15 · Diagnóstico de la segmentación con oráculo (E1-12)
 - SAM2.1 hiera-large con **cajas GT** (1790 instancias): IoU ≥ 0,5 en el 84 % (mIoU 0,74). Por tamaño, cruda → post-procesada: small 72 % → 75 %, medium 96 % → 94 %, large 97 % → 95 %.
 - **Lectura:** el error de máscaras en objetos chicos es en buena parte de SAM2 (aun con cajas perfectas, 1 de cada 4 no llega a IoU 0,5). El post-proceso ayuda en small y perjudica en medium y large (probablemente "componente principal" corta partes de objetos ocluidos).
-- **Propuesta para E1-30:** aplicar el post-proceso solo a máscaras chicas. Con cajas predichas, 176 de los 1264 TP de cajas se pierden en máscaras; el `mask_score` correlaciona 0,75 con el IoU real.
+- **Propuesta para E1-30:** aplicar el post-proceso solo a máscaras chicas. Con cajas predichas, 137 de los 1095 TP de cajas se pierden en máscaras; el `mask_score` correlaciona 0,75 con el IoU real.
 
 ### D-16 · Consistencia de la representación (E1-19)
-- 120 escenas, 6905 objetos, 924 198 relaciones: **0 inconsistencias**. Atributos en pares TP (1140): posición 97 %, tamaño 95 %, color 90 % (confusiones entre tonos vecinos: negro/gris, gris/blanco, marrón/negro).
-- **Riesgo abierto:** en el 9 % de los objetos más del 10 % de la máscara cae fuera de la caja entregada (por el margen de recorte de 0,1). No viola el schema, pero no sabemos si la métrica de consistencia de Kaggle compara caja y máscara. Candidato a experimento: `box_margin: 0` o entregar como `bbox` la caja de la máscara.
+- 120 escenas, 3564 objetos, 265 934 relaciones: **0 inconsistencias**. Atributos en pares TP (993): posición 97 %, tamaño 95 %, color 90 % (confusiones entre tonos vecinos: negro/gris, gris/blanco, marrón/negro).
+- **Riesgo abierto:** en el 5,6 % de los objetos más del 10 % de la máscara cae fuera de la caja entregada (por el margen de recorte de 0,1). No viola el schema, pero no sabemos si la métrica de consistencia de Kaggle compara caja y máscara. Candidato a experimento: `box_margin: 0` o entregar como `bbox` la caja de la máscara.
 
 ## 2026-10-24 · E1-30 (experimentos controlados)
 
@@ -127,7 +127,7 @@ Medido en Tesla T4 (torch 2.11, Python 3.13), 3 prompts, 1 calentamiento + 3 rep
 - **De punta a punta (cajas predichas), F1 de máscaras:** tuning 0,586 → 0,596 (+0,96); **holdout 0,614 → 0,609 (−0,54)**. F1 de cajas sin cambios (0,666 en holdout). Por tamaño en holdout: small −0,17, medium −0,93, large −1,32 puntos.
 - **Decisión:** no se adopta (se decide con holdout; además, ±1 punto en 40 imágenes son 2–3 instancias, indistinguible del ruido).
 - **Lectura:** las cajas de OWLv2 son más flojas que las GT; SAM2 se derrama fuera del objeto y el recorte a la caja del post-proceso es lo que lo corrige en medium/large. Con cajas GT ese recorte no hace falta, por eso el oráculo lo ve como perjuicio. Con el experimento sube la fracción de máscaras con > 10 % fuera de la caja (5,6 % → 6,0 %). **Una mejora medida con el oráculo no garantiza una mejora end-to-end: el error de detección se propaga a la segmentación.**
-- Registro: `outputs/experiments.csv` en el run de Kaggle (`exp_run` 20261024-193053-56d96386).
+- Registro: `outputs/experiments.csv` en el run de Kaggle (`exp_run` 20261024-224447-8fcb3c55).
 
 ### D-18 · Prompt del intérprete v2 sin contenido del benchmark (E1-26)
 - **Problema:** `interpreter_v1.txt` usaba como ejemplos categorías del benchmark (reloj, anillo, collar, mochila) y una de sus preguntas casi literal ("¿El reloj está por encima del anillo?"). Así, la validez del JSON y la exactitud del modo LLM medidas sobre el benchmark salen infladas, y en la defensa se puede objetar como ajuste sobre el conjunto de evaluación. Además, la v1 no tenía ningún ejemplo de `describe`, que es el 33 % de las consignas.

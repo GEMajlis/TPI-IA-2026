@@ -6,11 +6,10 @@ Resumen para el grupo: qué está hecho, qué resultados tenemos y qué falta. E
 
 ## Dónde estamos
 
-**Etapa 1 (promoción): 33 de 35 tareas.** La pipeline completa y la notebook final corren en Kaggle de punta a punta (detección → SAM2 → SceneJSON → preguntas en modo determinista y con LLM). El `submission.csv` fue aceptado con `PipelineScore = 0.6509` (**H1 cumplido**). Faltan el reporte y el checklist final.
+**Etapa 1 (promoción): 34 de 35 tareas.** La pipeline completa y la notebook final corren en Kaggle de punta a punta (detección → SAM2 → SceneJSON → preguntas en modo determinista y con LLM). El `submission.csv` fue aceptado con `PipelineScore = 0.6509` (**H1 cumplido**) y el reporte se genera desde los artefactos finales. Falta el checklist final.
 
 | Pendiente | Qué falta | Quién |
 |---|---|---|
-| **E1-33 · Reporte técnico** | `report/REPORTE.md` (portada, dataset, metodología, resultados, discusión y errores, conclusiones); cada número sale del run final | a repartir |
 | **E1-34 · Checklist final** | Condiciones de validez y checklist de promoción, punto por punto | a repartir |
 
 **Etapa 2 (sobresaliente):** E2-01 a E2-04, solo si queda tiempo después de E1-34. El análisis de errores recomienda **tiling tipo SAHI** ([error_analysis.md](error_analysis.md) §6).
@@ -28,7 +27,7 @@ Resumen para el grupo: qué está hecho, qué resultados tenemos y qué falta. E
 - **Por tamaño:** los objetos chicos son el cuello de botella. Solo el 40 % de las instancias chicas llega a TP de máscara, contra ~72 % en medium y large.
 - **Dónde se pierde cada instancia (E1-31):** 55,5 % llega a TP de máscara; se pierde sobre todo en la detección (11,6 % sin ninguna caja, 8,4 % con otra clase, 16,6 % bajo el umbral). NMS y tope casi no pierden nada (1 %).
 - **SAM2 con cajas GT (E1-12):** 84 % de las instancias con IoU ≥ 0,5; 72–75 % en las chicas (D-15).
-- **Consistencia del SceneJSON (E1-19):** 0 inconsistencias en 6905 objetos; posición 97 %, tamaño 95 % y color 90 % contra GT (D-16).
+- **Consistencia del SceneJSON (E1-19):** 0 inconsistencias en 3564 objetos; posición 97 %, tamaño 95 % y color 90 % contra GT (D-16).
 
 **Preguntas (20 imágenes del benchmark, 60 consignas):**
 
@@ -107,7 +106,8 @@ ruff check . && ruff format --check .
 - [x] **Resolver la portabilidad de la notebook:** es autocontenida y escribe el código con
   `%%writefile`; no depende de que el repositorio sea público.
 - [x] **Ejecutar y guardar E1-32 en Kaggle.**
-- [ ] **Cerrar E1-33 y E1-34.**
+- [x] **Generar E1-33 desde los artefactos finales.**
+- [ ] **Cerrar E1-34.**
 - [ ] **Pasar `desarrollo` a `main`** con un PR antes de entregar.
 - [ ] **Preparar la defensa:** 10 minutos; todos tienen que poder explicar cualquier parte.
 

@@ -255,10 +255,13 @@ Las referencias a campos del SceneJSON se resuelven siempre contra `data/competi
   entrega `20261024-225121-6f583413` generó las 80 filas. La última celda validó la entrega y
   produjo `grupo15_entrega_artifacts.zip` con métricas, trazas, manifiestos, análisis y submission.
 
-### [ ] E1-33 · Reporte técnico — ENT
+### [x] E1-33 · Reporte técnico — ENT
 - **Objetivo:** `report/REPORTE.md` con la estructura sugerida (portada, dataset, metodología, resultados, discusión y errores, conclusiones). Las tablas se generan desde los CSV del run final para garantizar correspondencia con la notebook. Declara modelos, recursos y código reutilizado.
 - **Depende de:** E1-32
 - **Aceptación:** cada número del reporte es trazable a un archivo del run final.
+- **Nota:** `scripts/build_report.py` valida el submission y genera `report/REPORTE.md` y
+  `report/report_data.json` desde `grupo15_entrega_artifacts.zip`. El snapshot conserva las cifras
+  usadas y el SHA-256 de cada JSON, CSV, manifiesto y traza de origen.
 
 ### [ ] E1-34 · Verificación final de validez — ENT
 - **Objetivo:** checklist: el test de frontera pasa; la pipeline procesa una imagen externa al dataset sin errores; las semillas y el manifest están completos; el reporte coincide con la notebook; el submission es válido; el modelo LLM es ejecutable en Kaggle; el checklist de promoción del enunciado está cubierto punto por punto.
