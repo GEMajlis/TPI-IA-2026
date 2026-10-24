@@ -17,7 +17,7 @@ ruff check . && ruff format --check .
 
 **Regla de oro (motivo de desaprobación):** el GT solo se lee desde `src/eval/` y `src/eda/`. Nada en `src/scene/` puede importarlos ni tocar anotaciones. Lo verifica `tests/test_import_boundary.py`; no lo desactiven. Las demás reglas de trabajo están en [CLAUDE.md](../CLAUDE.md).
 
-## Qué hicimos (Etapa 1: 19 de 35 tareas, y E1-17/E1-18 con el código listo)
+## Qué hicimos (Etapa 1: 24 de 35 tareas, y E1-18/E1-23 con el código listo)
 
 | Tarea | Qué quedó | Dónde |
 |---|---|---|
@@ -44,6 +44,8 @@ ruff check . && ruff format --check .
 | E1-20 DSL | Modelos pydantic de la consulta y del resultado; fixture con el DSL de las 60 consignas del benchmark | `src/scene/qa/dsl.py` |
 | E1-21 Category matcher | Texto en inglés o español → categoría: nombre, plurales, léxico español, sinónimos LVIS y LaBSE como último recurso (D-13) | `src/scene/qa/category_matcher.py`, `configs/lexicon_es.yaml` |
 | E1-30 Experimentos | Umbral 0,18 adoptado (+4,7 F1 holdout); post-proceso solo en chicas descartado (D-17) | `configs/experiments/`, `scripts/compare_runs.py` |
+| E1-22 Ejecutor | Ejecuta el DSL sobre el SceneJSON con filtros, evidencia, confianza y estados `unsupported` / `insufficient_information` / `ambiguous` | `src/scene/qa/executor.py` |
+| E1-23 Modo determinista (falta Kaggle) | Benchmark → DSL sin LLM y `questions` en las 20 escenas del benchmark | `src/scene/qa/structured_adapter.py`, `scripts/run_qa.py` |
 | E1-10 Post-proceso | Umbral, NMS por clase, NMS entre clases (apagado) y tope, con conteos en la traza | `src/scene/detection/postprocess.py` |
 
 **Resultados en Kaggle (120 imágenes de dev):**
@@ -84,10 +86,10 @@ La idea es armar primero un **corte vertical mínimo** y probarlo en Kaggle con 
 1. ~~**E1-09 y E1-10 · Detector OWLv2 y post-proceso.**~~ Hecho.
 2. ~~**Primera corrida en Kaggle.**~~ Hecho: F1 de cajas 0,60.
 3. ~~**SAM2 en Kaggle y E1-13 · propiedades básicas.**~~ Hecho: F1 de máscaras 0,54.
-4. **Primer envío (hito H1):** `submission.csv` generado en Kaggle con umbral 0,18 (80 filas válidas, 2271 objetos, 164 796 relaciones, 15,3 MB). Falta subirlo y anotar el puntaje.
+4. **Primer envío (hito H1):** `submission.csv` generado en Kaggle con umbral 0,18 (80 filas válidas, 2271 objetos, 164 796 relaciones, 15,3 MB). Falta subirlo y anotar el puntaje. Ese submission no tiene `questions`: para sumarlas (E1-23) alcanza con correr sobre el mismo run, sin GPU, `python scripts/run_qa.py --config configs/base.yaml configs/kaggle.yaml --run latest` y después `python scripts/make_submission.py --config configs/base.yaml configs/kaggle.yaml --run latest --out /kaggle/working/submission.csv`.
 
 En paralelo, porque no dependen de los modelos (se trabajan con SceneJSON sintéticos):
-- ~~**E1-20 y E1-21:** DSL y category matcher.~~ Hecho. Sigue **E1-22**, el ejecutor determinista.
+- ~~**E1-20 a E1-23:** DSL, category matcher, ejecutor y modo determinista.~~ Hecho (E1-23 falta correrlo en Kaggle). Sigue **E1-24**, la evaluación de QA.
 - **E1-25:** carga del LLM y benchmark de memoria y latencia en T4.
 
 ## Qué queda por hacer
@@ -115,7 +117,7 @@ En paralelo, porque no dependen de los modelos (se trabajan con SceneJSON sinté
 - [ ] **Revisar y aprobar las decisiones abiertas de [DECISIONS.md](DECISIONS.md):**
   - **D-06:** umbrales de tamaño;
   - **D-09:** sin NMS entre clases en la línea base;
-  - **D-10:** qué responder cuando una pregunta en singular encuentra varias instancias.
+  - **D-10:** qué responder cuando una pregunta en singular encuentra varias instancias (implementada en E1-22: la de mayor confianza, con estado `ambiguous`).
 - [x] **Repartir las tareas** (todo en la rama `desarrollo`, un commit por tarea, `git pull` antes de empezar y antes de cada push; cada uno toca su carpeta):
   - **QA:** E1-20, E1-21, E1-22 y E1-23 (`src/scene/qa/`).
   - **LLM:** E1-25, E1-26 y E1-27 (`src/scene/llm/`).

@@ -47,9 +47,10 @@ Formato: fecha · decisión · alternativa descartada · evidencia. Las entradas
 - **Alternativa:** PLAN §4.1 lo ponía en la base con IoU ≈ 0,8.
 - **Evidencia:** EDA H6. El GT tiene 25 pares de clases distintas con IoU de caja ≥ 0,8, y varios son el mismo objeto con dos etiquetas (cup/drinking glass, hat/baseball cap, television set/computer monitor). El NMS entre clases eliminaría TP reales.
 
-### D-10 · **pendiente (E1-22)** · Preguntas singulares con varias instancias detectadas
+### D-10 · **adoptada (E1-22)** · Preguntas singulares con varias instancias detectadas
 - PLAN §4.5 responde `ambiguous` con la evidencia de todas. Pero en el benchmark cada clase de una pregunta de posición, tamaño o relación tiene exactamente 1 instancia en el GT (EDA H8), y `answer` es obligatorio.
 - **Propuesta:** responder con la instancia de mayor confianza, bajar la confianza de la respuesta y guardar el estado `ambiguous` en un campo propio, para medirlo en el análisis de errores.
+- **Implementación (E1-22):** `normalized_answer` sale de la instancia de mayor confianza; `evidence` lleva todas (la elegida primero); la confianza es `c_max × c_max / Σc` (la parte de la confianza total que corresponde a la elegida); `status = "ambiguous"` y `status_detail` dicen cuántas instancias había. En las relaciones se aplica a cada lado, y el objeto nunca puede ser la misma instancia que el sujeto.
 
 ### D-11 · Sinónimos LVIS desde detectron2
 - **Decisión:** se descarga en tiempo de ejecución `detectron2/data/datasets/lvis_v1_categories.py` (público). Se parsea con `ast.literal_eval`, sin ejecutar código, y se cachea en `data/cache/lvis_synonyms.json` junto con el sha256 de la fuente.

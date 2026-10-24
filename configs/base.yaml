@@ -111,6 +111,39 @@ qa:
       # D-13: en la calibración, el negativo más alto dio 0,887 ("puerta" → doorknob).
       threshold: 0.9
       batch_size: 64
+  executor:
+    describe_max_categories: 5   # categorías que se nombran en la descripción determinista
+    # Colores en español → nombre de la paleta (scene.color.palette).
+    color_aliases:
+      negro: black
+      blanco: white
+      gris: gray
+      rojo: red
+      naranja: orange
+      amarillo: yellow
+      verde: green
+      azul: blue
+      violeta: purple
+      morado: purple
+      rosa: pink
+      rosado: pink
+      marron: brown
+      marrón: brown
+  adapter:
+    # Frase del texto de la pregunta → predicado (el benchmark no estructura la relación).
+    relation_phrases:
+      por encima de: above
+      encima de: above
+      arriba de: above
+      por debajo de: below
+      debajo de: below
+      abajo de: below
+      a la derecha de: right_of
+      a la izquierda de: left_of
+      superpuesto con: overlaps
+      se superpone con: overlaps
+      cerca de: near
+      sobre: on_top_of
 
 # Solo lo usa src/eval/ y src/eda/ (nunca la inferencia).
 eval:

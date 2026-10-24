@@ -215,6 +215,11 @@ def load_lexicon(path: str | Path) -> dict[str, list[str]]:
         return {str(k): [str(t) for t in v] for k, v in (yaml.safe_load(f) or {}).items()}
 
 
+def spanish_names(categories: list[Category], lexicon: dict[str, list[str]]) -> dict[int, str]:
+    """Nombre en español de cada categoría (primer término del léxico; si no hay, el original)."""
+    return {c.id: (lexicon.get(c.name) or [c.name])[0] for c in categories}
+
+
 def matcher_from_config(
     cfg: dict, categories: list[Category], device: str = "cpu"
 ) -> CategoryMatcher:
