@@ -91,3 +91,22 @@ validar al menos 95 % del JSON sobre el benchmark e inspeccionar las 20 descripc
 
   El umbral prioriza la precisión: preferimos `unsupported` antes que contestar sobre otra categoría. El fallback recupera poco (5 de 18), así que la cobertura en español depende sobre todo del léxico.
 - **Limitación:** el léxico incluye las traducciones que usa el benchmark (`class_es`), porque son las traducciones naturales. Por eso la cobertura del 100 % sobre el benchmark está sobreestimada para preguntas redactadas de otra forma. La muestra de calibración es chica (40 términos).
+
+## 2026-10-24 · E1-12, E1-19 y E1-29 (corridas completas en Kaggle, 120 imágenes de dev)
+
+### D-12 · Umbral de detección 0,18 (antes 0,1)
+- **Decisión:** `detection.score_threshold = 0.18`, elegido como el máximo F1 de cajas en el split de tuning (80 imágenes, estratificado por cantidad de instancias, semilla 42) y reportado en holdout (40).
+- **Evidencia (holdout):** con 0,10 → P 0,55 · R 0,71 · F1 **0,619**; con 0,18 → P 0,72 · R 0,62 · F1 **0,666** (+4,7 puntos). Predicciones por imagen: ~57 → ~28. En tuning el F1 con 0,18 es 0,646, así que el holdout no muestra sobreajuste.
+- **NMS entre clases (IoU 0,8):** F1 holdout 0,6667 vs 0,6661 sin él. No aporta, así que sigue apagado (confirma D-09).
+- **Efecto colateral:** la mitad de objetos por escena reduce las relaciones y el peso del submission.
+- Salidas: `outputs/tuning/1bc16d79/` (curva, split y resumen) en el run de Kaggle.
+
+### D-13 · Diagnóstico de la segmentación con oráculo (E1-12)
+- SAM2.1 hiera-large con **cajas GT** (1790 instancias): IoU ≥ 0,5 en el 84 % (mIoU 0,74). Por tamaño, cruda → post-procesada: small 72 % → 75 %, medium 96 % → 94 %, large 97 % → 95 %.
+- **Lectura:** el error de máscaras en objetos chicos es en buena parte de SAM2 (aun con cajas perfectas, 1 de cada 4 no llega a IoU 0,5). El post-proceso ayuda en small y perjudica en medium y large (probablemente "componente principal" corta partes de objetos ocluidos).
+- **Propuesta para E1-30:** aplicar el post-proceso solo a máscaras chicas. Con cajas predichas, 176 de los 1264 TP de cajas se pierden en máscaras; el `mask_score` correlaciona 0,75 con el IoU real.
+
+### D-14 · Consistencia de la representación (E1-19)
+- 120 escenas, 6905 objetos, 924 198 relaciones: **0 inconsistencias**. Atributos en pares TP (1140): posición 97 %, tamaño 95 %, color 90 % (confusiones entre tonos vecinos: negro/gris, gris/blanco, marrón/negro).
+- **Riesgo abierto:** en el 9 % de los objetos más del 10 % de la máscara cae fuera de la caja entregada (por el margen de recorte de 0,1). No viola el schema, pero no sabemos si la métrica de consistencia de Kaggle compara caja y máscara. Candidato a experimento: `box_margin: 0` o entregar como `bbox` la caja de la máscara.
+
