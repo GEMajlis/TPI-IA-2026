@@ -19,7 +19,7 @@ Formato: fecha · decisión · alternativa descartada · evidencia. Las entradas
 
 ## Hallazgos en los archivos normativos (a resolver en E1-03)
 
-### D-04 · **pendiente (E1-03 / E1-15)** · `near` y `on_top_of` no están en el enum del schema
+### D-04 · **adoptada (E1-03); se implementa en E1-15** · `near` y `on_top_of` no están en el enum del schema
 - `scene_schema.json` restringe `relations[].predicate` a `left_of, right_of, above, below, overlaps`. PLAN §4.3 y E1-15 incluyen `near` y `on_top_of`: si se guardan en `relations`, el JSON **no valida**.
 - **Propuesta:** guardar en `relations` solo los cinco predicados del schema y, si se implementan, poner `near` / `on_top_of` en un campo propio (por ejemplo `extra_relations`), que el schema admite (`additionalProperties: true`).
 
@@ -29,11 +29,28 @@ Formato: fecha · decisión · alternativa descartada · evidencia. Las entradas
 - Las preguntas están en **español** (`class_es`) y traen el campo estructurado `class_en` con el nombre del vocabulario. En modo LLM solo se recibe el texto: el category matcher (E1-21) tiene que mapear nombres en español (necesita un léxico es→en del vocabulario).
 - Las relaciones del benchmark se formulan con instancias en singular ("¿La instancia de X está por encima de la instancia de Y?").
 
-### D-06 · **pendiente (E1-06 / E1-13)** · El schema no fija umbrales de tamaño
-- `size` es `small | medium | large` sin umbrales; se proponen con el EDA. Tampoco define la convención exacta de la grilla 3×3 ni del centroide (se asume `[x, y]` en píxeles, igual que el ejemplo).
+### D-06 · **propuesta (E1-06)** · El schema no fija umbrales de tamaño
+- `size` es `small | medium | large` sin umbrales. Propuesta del EDA (H2): `area_ratio` < 0,333 % → small, < 3 % → medium, si no large (COCO 32²/96² px sobre 640×480). Queda en `scene.size_thresholds`; si el enunciado define otros, se cambian ahí.
+- Las convenciones de grilla 3×3, centroide y bbox quedan en `docs/schema_notes.md` §6.
 
 ### D-07 · **pendiente (E1-08)** · `categories.csv` no trae sinónimos
 - El vocabulario ya viene limpio (sin `_` ni paréntesis). Para el experimento de sinónimos hace falta una fuente pública (metadata de categorías de LVIS v1) descargada en tiempo de ejecución.
 
 ### D-08 · Métrica de Kaggle
 - `PipelineScore` = 40 % F1 de cajas + 35 % F1 de máscaras + 15 % consistencia estructural + 10 % QA (promedio de `questions` y `questions_llm`, solo en las 20 imágenes del benchmark). La segmentación pesa casi tanto como la detección: priorizar la calidad de SAM2 y la consistencia de los campos derivados.
+
+## 2026-10-24 · E1-03, E1-06, E1-07 y E1-08
+
+### D-09 · Sin NMS entre clases en la línea base (cambia PLAN §4.1)
+- **Decisión:** la línea base usa solo NMS por clase. El NMS entre clases pasa a ser un experimento (E1-30).
+- **Alternativa:** PLAN §4.1 lo ponía en la base con IoU ≈ 0,8.
+- **Evidencia:** EDA H6. El GT tiene 25 pares de clases distintas con IoU de caja ≥ 0,8, y varios son el mismo objeto con dos etiquetas (cup/drinking glass, hat/baseball cap, television set/computer monitor). El NMS entre clases eliminaría TP reales.
+
+### D-10 · **pendiente (E1-22)** · Preguntas singulares con varias instancias detectadas
+- PLAN §4.5 responde `ambiguous` con la evidencia de todas. Pero en el benchmark cada clase de una pregunta de posición, tamaño o relación tiene exactamente 1 instancia en el GT (EDA H8), y `answer` es obligatorio.
+- **Propuesta:** responder con la instancia de mayor confianza, bajar la confianza de la respuesta y guardar el estado `ambiguous` en un campo propio, para medirlo en el análisis de errores.
+
+### D-11 · Sinónimos LVIS desde detectron2
+- **Decisión:** se descarga en tiempo de ejecución `detectron2/data/datasets/lvis_v1_categories.py` (público). Se parsea con `ast.literal_eval`, sin ejecutar código, y se cachea en `data/cache/lvis_synonyms.json` junto con el sha256 de la fuente.
+- **Alternativa:** `lvis_v1_val.json` (cientos de MB, y además trae anotaciones). Se descarta.
+- **Evidencia:** 117 de 120 nombres coinciden directamente; `laptop`, `cell phone` y `computer monitor` se mapean con `vocab.lvis_aliases`.

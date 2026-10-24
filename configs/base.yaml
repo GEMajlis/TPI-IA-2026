@@ -17,9 +17,39 @@ paths:
 dataset:
   image_extensions: [".jpg", ".jpeg", ".png"]
 
-# Solo lo usa src/eval/ (nunca la inferencia).
+vocab:
+  mode: clean               # clean | synonyms (sinónimos LVIS, experimento E1-30)
+  prompt_template: "a photo of a {}"
+  max_synonyms: null        # tope de sinónimos por categoría (null = todos)
+  # Fuente pública de sinónimos LVIS v1 (se descarga en tiempo de ejecución y se cachea).
+  lvis_categories_url: https://raw.githubusercontent.com/facebookresearch/detectron2/main/detectron2/data/datasets/lvis_v1_categories.py
+  synonyms_cache: data/cache/lvis_synonyms.json
+  # Nombres de la competencia que no coinciden con el nombre LVIS (valor = nombre LVIS crudo).
+  lvis_aliases:
+    laptop: laptop_computer
+    cell phone: cellular_telephone
+    computer monitor: monitor_(computer_equipment) computer_monitor
+
+detection:
+  max_detections: 100       # tope por imagen (EDA: máx. 66 instancias GT; schema admite 300)
+
+scene:
+  # Umbrales de tamaño sobre area_ratio (el schema no los fija; ver docs/eda_findings.md).
+  # Equivalen a 32² y 96² px (convención COCO) sobre una imagen de referencia de 640×480.
+  size_thresholds:
+    small_max: 0.00333
+    medium_max: 0.03
+
+# Solo lo usa src/eval/ y src/eda/ (nunca la inferencia).
 eval:
   annotations: development/annotations.json
+  iou_thr: 0.5
+  # Bins de frecuencia por cantidad de imágenes donde la categoría es positiva (EDA: 3 a 11).
+  frequency_bins:
+    rare_max: 4
+    common_max: 7
+  # IoU de caja a partir del cual dos instancias de la misma clase se consideran duplicadas (EDA).
+  eda_duplicate_iou: 0.5
 
 tracing:
   trace_file: trace.jsonl

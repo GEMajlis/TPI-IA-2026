@@ -32,10 +32,11 @@ Las referencias a campos del SceneJSON se resuelven siempre contra `data/competi
 - **Aceptación:** el test de frontera pasa y falla si se agrega un import prohibido (testeado).
 - **Nota (interfaz):** `list_images(cfg, split)` con splits `dev` (120), `test` (60) y `benchmark` (20); las dimensiones se leen del archivo de imagen, no de la metadata de GT. `categories.csv` no trae sinónimos: `Category.synonyms` queda vacío hasta E1-08. El test de frontera además prohíbe las claves `eval`, `annotations`, `neg_category_ids` y `not_exhaustive_category_ids` en `src/scene/`, e importa todo `scene` en un subproceso para verificar que no se cargue `eval`/`eda`.
 
-### [ ] E1-03 · Lectura de archivos normativos — INF
+### [x] E1-03 · Lectura de archivos normativos — INF
 - **Objetivo:** leer `scene_schema.json`, `sample_submission.csv` y el benchmark de preguntas. Escribir `docs/schema_notes.md` con campos obligatorios, enums (posiciones, tamaños, relaciones), umbrales definidos, formato de `questions` / `questions_llm` / `interpreted_query`, y los tipos de pregunta y campos estructurados del benchmark con ejemplos. Implementar `scene/scene/schema.py` con validación por `jsonschema`.
 - **Depende de:** E1-00
 - **Aceptación:** el SceneJSON de ejemplo de `sample_submission.csv` valida; un JSON con un campo obligatorio faltante falla. `schema_notes.md` lista explícitamente todo lo que el schema **no** define y que el grupo debe decidir.
+- **Nota (interfaz):** `validate_scene(scene, schema_path, structural=True) -> list[str]` y `assert_valid_scene(...)`. Además del schema, `structural_errors` chequea ids únicos, `mask.size == [H, W]`, suma de counts y referencias de relaciones/evidencia. Constantes `POSITIONS`, `SIZES`, `RELATION_PREDICATES` y `QUESTION_TYPES` (testeadas contra el schema). Las 80 filas de `sample_submission.csv` validan.
 
 ### [x] E1-04 · RLE no comprimido column-major — INF
 - **Objetivo:** `scene/masks/rle.py` con `encode(mask) -> {"size":[H,W],"counts":[...]}` y `decode(rle) -> mask`.
@@ -49,7 +50,7 @@ Las referencias a campos del SceneJSON se resuelven siempre contra `data/competi
 - **Aceptación:** test con una etapa que falla: queda registrada con `status=error` y el traceback, y el pipeline sigue con la imagen siguiente.
 - **Nota (interfaz):** `tracer.stage(...)` registra y **relanza** el error (para no seguir con datos incompletos); `tracer.image_guard(image_id)` lo atrapa por imagen y el run sigue. Campo `extra` para conteos por filtro y `gpu_mem_peak_mb` si hay CUDA.
 
-### [ ] E1-06 · EDA — EVA
+### [x] E1-06 · EDA — EVA
 - **Objetivo:** `src/eda/` más una sección de notebook. Cada gráfico responde una pregunta y termina en una decisión. Mínimo:
   - instancias por imagen;
   - distribución de área relativa de los objetos (porcentaje de objetos chicos);
@@ -60,18 +61,21 @@ Las referencias a campos del SceneJSON se resuelven siempre contra `data/competi
   - tipos y objetos del benchmark de preguntas.
 - **Depende de:** E1-02
 - **Aceptación:** `docs/eda_findings.md` con 5 a 8 hallazgos, cada uno con su implicancia (por ejemplo: "X % de los objetos tiene área relativa < 1 % → evaluar tiling"). Propone los umbrales de tamaño si el schema no los fija.
+- **Nota:** `scripts/run_eda.py` genera tablas, figuras y `eda_summary.json` en `outputs/eda/`. La sección de notebook se arma en E1-32 a partir de ese script. Parámetros nuevos en `base.yaml`: `scene.size_thresholds`, `detection.max_detections`, `eval.frequency_bins`.
 
-### [ ] E1-07 · Evaluador federado LVIS — EVA
+### [x] E1-07 · Evaluador federado LVIS — EVA
 - **Objetivo:** `eval/lvis_federated.py`. Por imagen y categoría, matching greedy por score con IoU ≥ 0,5 (cajas o máscaras). TP/FN sobre GT anotado; FP solo en categorías negativas, o en positivas no matcheadas que **no** sean no exhaustivas; el resto se ignora. Reporta P, R, F1 y **cobertura evaluable** (fracción de predicciones que entraron en la cuenta de precisión), global, por tamaño y por frecuencia de clase.
 - **Depende de:** E1-02, E1-04
 - **Aceptación:** tests con casos sintéticos que reproducen el ejemplo horse/car/chair del enunciado; predicción perfecta → F1 = 1; salida en `metrics_detection.json` y un CSV por categoría.
+- **Nota (interfaz):** `evaluate(preds, gt, image_ids, iou_type="bbox"|"segm", ...)` o `evaluate_from_config(preds, gt, cfg, iou_type)` → `FederatedResult` (summary, by_size, by_frequency, per_category, events). `predictions_from_scenes(scenes)` convierte SceneJSON. `save_metrics(result, run_dir, name)`. F1 global = micro; también se reporta `f1_macro`. El test horse/car/chair se armó con las reglas del README del dataset (falta el enunciado para confirmar el ejemplo exacto). El GT contra sí mismo da F1 = 1 en cajas y máscaras.
 
 ## Percepción
 
-### [ ] E1-08 · Vocabulario y prompts — PER
+### [x] E1-08 · Vocabulario y prompts — PER
 - **Objetivo:** `detection/vocabulary.py`: limpieza de nombres, sinónimos opcionales desde el metadata de categorías, y mapeo query → category_id. Configurable (`vocab.mode: clean | synonyms`).
 - **Depende de:** E1-02
 - **Aceptación:** tests de limpieza; las 120 categorías quedan mapeadas sin colisiones.
+- **Nota (interfaz):** `vocabulary_from_config(cfg, categories) -> Vocabulary` (`queries`, `prompts()`, `query_to_category()`, `by_category()`, `dropped`). Los sinónimos vienen de `lvis_v1_categories.py` de detectron2 (público), se descargan una vez y se cachean en `data/cache/lvis_synonyms.json`. Hay 3 nombres que la competencia renombró y se mapean con `vocab.lvis_aliases`. Modo `clean`: 120 queries; modo `synonyms`: 215 queries, sin colisiones.
 
 ### [ ] E1-09 · Interfaz Detector + OWLv2 (línea base) — PER
 - **Objetivo:** `detection/base.py` (interfaz `detect(image) -> list[Detection]`) y `detection/owlv2.py`. Cajas en coordenadas de la imagen original (atención al padding cuadrado de OWLv2), batching de queries, `device` configurable.
