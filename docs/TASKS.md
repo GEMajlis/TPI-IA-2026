@@ -77,15 +77,17 @@ Las referencias a campos del SceneJSON se resuelven siempre contra `data/competi
 - **Aceptación:** tests de limpieza; las 120 categorías quedan mapeadas sin colisiones.
 - **Nota (interfaz):** `vocabulary_from_config(cfg, categories) -> Vocabulary` (`queries`, `prompts()`, `query_to_category()`, `by_category()`, `dropped`). Los sinónimos vienen de `lvis_v1_categories.py` de detectron2 (público), se descargan una vez y se cachean en `data/cache/lvis_synonyms.json`. Hay 3 nombres que la competencia renombró y se mapean con `vocab.lvis_aliases`. Modo `clean`: 120 queries; modo `synonyms`: 215 queries, sin colisiones.
 
-### [ ] E1-09 · Interfaz Detector + OWLv2 (línea base) — PER
+### [x] E1-09 · Interfaz Detector + OWLv2 (línea base) — PER
 - **Objetivo:** `detection/base.py` (interfaz `detect(image) -> list[Detection]`) y `detection/owlv2.py`. Cajas en coordenadas de la imagen original (atención al padding cuadrado de OWLv2), batching de queries, `device` configurable.
 - **Depende de:** E1-08, E1-05
 - **Aceptación:** smoke test en CPU con 2 imágenes; las cajas dibujadas coinciden visualmente con los objetos (guardar una imagen de debug); se traza la etapa.
+- **Nota (interfaz):** `Detection` y `Detector.detect(image) -> list[Detection]` en `detection/base.py` (más `save_detections`/`load_detections`). `Owlv2Detector` y `build_detector(cfg, vocab, device)` en `detection/owlv2.py`: cajas × lado mayor (padding cuadrado), por clase queda la query de mayor score (sinónimos), `labels_per_box` categorías por caja, piso `score_floor` y tope `raw_topk` para la caché cruda. fp16 en CUDA. `scripts/run_detection.py` corre detección + post-proceso con traza, caché (`detections_raw/`, `detections/`), `--debug` y `--eval` (F1 de cajas). Smoke test en CPU sobre 2 imágenes de dev: ~12 s/imagen, F1 = 0,65 (muestra chica, no representativa).
 
-### [ ] E1-10 · Post-proceso de detecciones — PER
+### [x] E1-10 · Post-proceso de detecciones — PER
 - **Objetivo:** `detection/postprocess.py`: umbral global (y opcional por clase), NMS por clase, NMS entre clases configurable y tope de detecciones por imagen. Cada filtro registra en la traza cuántas detecciones elimina.
 - **Depende de:** E1-09
 - **Aceptación:** tests unitarios de NMS; los parámetros salen de la config.
+- **Nota (interfaz):** `postprocess(dets, cfg["detection"]) -> PostprocessResult(detections, counts)`; `counts` = sobrevivientes por paso (`raw`, `threshold`, `nms_per_class`, [`nms_cross_class`], `max_detections`) y va a `extra.counts` de la traza. NMS en numpy (sin torchvision). Umbral inicial 0,1 (se ajusta en E1-29); NMS entre clases apagado (D-09).
 
 ### [ ] E1-11 · SAM2 con cajas como prompt — PER
 - **Objetivo:** `segmentation/sam2.py` (batch de cajas por imagen, multimask y selección por IoU predicho) y `segmentation/postprocess.py` (recorte a la caja con margen, componente principal, relleno de huecos).
