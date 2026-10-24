@@ -54,3 +54,23 @@ Formato: fecha · decisión · alternativa descartada · evidencia. Las entradas
 - **Decisión:** se descarga en tiempo de ejecución `detectron2/data/datasets/lvis_v1_categories.py` (público). Se parsea con `ast.literal_eval`, sin ejecutar código, y se cachea en `data/cache/lvis_synonyms.json` junto con el sha256 de la fuente.
 - **Alternativa:** `lvis_v1_val.json` (cientos de MB, y además trae anotaciones). Se descarta.
 - **Evidencia:** 117 de 120 nombres coinciden directamente; `laptop`, `cell phone` y `computer monitor` se mapean con `vocab.lvis_aliases`.
+
+## 2026-10-24 · LLM (E1-25 a E1-27, en desarrollo)
+
+### D-12 · **pendiente de corrida T4** · Selección del LLM
+- **Implementación:** los pesos se descargan en tiempo de ejecución desde Hugging Face. Kaggle
+  aporta la T4; los modelos públicos no requieren credenciales. Para un repositorio privado se usa
+  `HF_TOKEN` como Secret de Kaggle, nunca dentro del código.
+- **Candidatos:** Qwen2.5-3B-Instruct en fp16 y Qwen3-4B en 4-bit NF4. Qwen2.5 queda como
+  valor provisional de desarrollo hasta medir recursos y validez del DSL.
+- **Protocolo:** una pasada de calentamiento y tres generaciones medidas con los mismos prompts;
+  semilla 42, greedy decoding y T4. Comando:
+  `pip install -e ".[llm]" && python scripts/benchmark_llm.py --config configs/base.yaml configs/kaggle.yaml`.
+
+| Candidato | Precisión | Memoria de carga (MiB) | Latencia media (ms) | p95 (ms) | Decisión |
+|---|---:|---:|---:|---:|---|
+| Qwen2.5-3B-Instruct | fp16 | pendiente T4 | pendiente T4 | pendiente T4 | provisional |
+| Qwen3-4B | 4-bit NF4 | pendiente T4 | pendiente T4 | pendiente T4 | pendiente |
+
+No se completan E1-25/E1-26/E1-27 hasta reemplazar estos pendientes por mediciones reales,
+validar al menos 95 % del JSON sobre el benchmark e inspeccionar las 20 descripciones de E1-16.

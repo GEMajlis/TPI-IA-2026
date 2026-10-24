@@ -172,16 +172,23 @@ Las referencias a campos del SceneJSON se resuelven siempre contra `data/competi
 - **Objetivo:** `llm/model.py`: carga configurable (Qwen2.5-3B-Instruct o Qwen3-4B; fp16 o 4-bit), generación con semilla fija y temperatura 0. Medir memoria y latencia en T4.
 - **Depende de:** E1-01
 - **Aceptación:** tabla de memoria y latencia por candidato en `docs/DECISIONS.md` con la elección justificada.
+- **En desarrollo (2026-10-24):** wrapper lazy para fp16/4-bit y `scripts/benchmark_llm.py`
+  implementados. Falta ejecutar ambos candidatos en T4 y cerrar D-12 con mediciones reales.
 
 ### [ ] E1-26 · Intérprete pregunta → DSL — LLM
 - **Objetivo:** `llm/interpreter.py` con prompt few-shot versionado. Recibe **solo** el texto de la pregunta, produce JSON, valida contra el DSL, reintenta una vez ante error y, si vuelve a fallar, devuelve `unsupported`. El mapeo de la categoría lo hace E1-21, no el LLM.
 - **Depende de:** E1-25, E1-20, E1-21
 - **Aceptación:** validez del JSON ≥ 95 % y coincidencia del DSL con el del modo determinista medida sobre el benchmark; casos no soportados y ambiguos incluidos en los few-shot.
+- **En desarrollo (2026-10-24):** intérprete, prompt versionado, validación, resolución de
+  categorías por inyección y fallback implementados con tests. La medición sobre el benchmark
+  queda bloqueada hasta integrar E1-20 y E1-21.
 
 ### [ ] E1-27 · Verbalización y descripción — LLM
 - **Objetivo:** `qa/verbalize.py` (respuesta en lenguaje natural a partir del resultado del ejecutor) y `llm/describer.py` (descripción a partir de un resumen textual compacto del SceneJSON). Verificador de fidelidad: cada categoría y número mencionado debe existir en el JSON.
 - **Depende de:** E1-25, E1-16
 - **Aceptación:** las 20 descripciones generadas, con la métrica de fidelidad calculada; se registran los casos con afirmaciones no sustentadas.
+- **En desarrollo (2026-10-24):** verbalización, resumen compacto, descriptor y verificador de
+  categorías/números implementados con tests. La corrida de 20 escenas queda pendiente de E1-16.
 
 ### [ ] E1-28 · Integración de `questions_llm` — LLM
 - **Objetivo:** genera `questions_llm` (con `interpreted_query`) y las descripciones para las 20 imágenes del benchmark mediante intérprete → mismo ejecutor → verbalización, e integra el resultado en el submission.

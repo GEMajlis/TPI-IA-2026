@@ -69,3 +69,31 @@ eval:
 tracing:
   trace_file: trace.jsonl
   manifest_file: run_manifest.json
+
+llm:
+  selected: qwen25_3b
+  candidates:
+    qwen25_3b:
+      model_id: Qwen/Qwen2.5-3B-Instruct
+      precision: fp16
+      chat_template_kwargs: {}
+    qwen3_4b:
+      model_id: Qwen/Qwen3-4B
+      precision: 4bit
+      chat_template_kwargs:
+        enable_thinking: false
+  max_new_tokens: 256
+  seed: 42
+  trust_remote_code: false
+  interpreter:
+    prompt_version: interpreter_v1.txt
+    max_attempts: 2
+  describer:
+    prompt_version: describer_v1.txt
+    max_new_tokens: 160
+    max_objects: 100
+    max_relations: 100
+    retry_on_unfaithful: 1
+  benchmark:
+    warmup: 1
+    repeats: 3

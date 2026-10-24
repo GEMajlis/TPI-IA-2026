@@ -35,6 +35,13 @@ ruff check . && ruff format --check .
 
 OWLv2 ya corre de punta a punta en CPU (smoke test: 2 imágenes de dev, ~12 s por imagen, F1 de cajas 0,65 en esa muestra chica). Falta la primera corrida completa en Kaggle.
 
+## En desarrollo
+
+- **E1-25 a E1-27 (rama `task/E1-25-27-llm`):** carga lazy de Qwen, benchmark para T4,
+  intérprete pregunta→DSL, verbalización, descriptor desde SceneJSON y verificación de
+  fidelidad ya tienen implementación y tests. Siguen abiertas hasta integrar E1-16/E1-20/E1-21
+  y ejecutar las mediciones de aceptación en Kaggle.
+
 ## Lo más importante que aprendimos
 
 - **Hay diferencias con el plan original** ([DECISIONS.md](DECISIONS.md)):
