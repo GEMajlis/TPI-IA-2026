@@ -17,7 +17,7 @@ ruff check . && ruff format --check .
 
 **Regla de oro (motivo de desaprobación):** el GT solo se lee desde `src/eval/` y `src/eda/`. Nada en `src/scene/` puede importarlos ni tocar anotaciones. Lo verifica `tests/test_import_boundary.py`; no lo desactiven. Las demás reglas de trabajo están en [CLAUDE.md](../CLAUDE.md).
 
-## Qué hicimos (Etapa 1: 13 de 35 tareas)
+## Qué hicimos (Etapa 1: 15 de 35 tareas)
 
 | Tarea | Qué quedó | Dónde |
 |---|---|---|
@@ -33,6 +33,8 @@ ruff check . && ruff format --check .
 | E1-09 OWLv2 | Detector base con caché de detecciones crudas e imágenes de debug | `src/scene/detection/owlv2.py`, `scripts/run_detection.py` |
 | E1-11 SAM2 | Máscaras con las cajas como prompt, post-proceso y caché RLE; F1 de máscaras | `src/scene/segmentation/`, `scripts/run_segmentation.py` |
 | E1-13 Propiedades | Área, área relativa, centroide, posición 3×3, tamaño y caja de la máscara; caja rasterizada si la máscara queda vacía | `src/scene/scene/properties.py` |
+| E1-14 Color | Color dominante por k-means en Lab, paleta de 11 colores, `null` si la máscara es muy chica | `src/scene/scene/color.py` |
+| E1-15 Relaciones | `left_of`, `right_of`, `above`, `below`, `overlaps` (schema) y `near`, `on_top_of` (campo aparte), con tope priorizado | `src/scene/scene/relations.py` |
 | E1-10 Post-proceso | Umbral, NMS por clase, NMS entre clases (apagado) y tope, con conteos en la traza | `src/scene/detection/postprocess.py` |
 
 **Línea base de detección en Kaggle (120 imágenes de dev, umbral 0,1 sin ajustar):** P = 0,52, R = 0,71, **F1 de cajas = 0,60**, cobertura evaluable 35 %. Ya supera el 0,50 de promoción. El punto débil es la precisión (~57 predicciones por imagen contra ~15 de GT): el ajuste de umbral (E1-29) debería mejorarla. **Línea base de segmentación en Kaggle (SAM2.1 hiera-large sobre esas cajas):** P = 0,47, R = 0,64, **F1 de máscaras = 0,54**. Se pierden 124 de los 1264 TP de cajas (~10 %) porque la máscara no llega a IoU 0,5: E1-12 (oráculo con cajas GT) dirá si es error de SAM2 o del post-proceso.
@@ -59,7 +61,6 @@ La idea es armar primero un **corte vertical mínimo** y probarlo en Kaggle con 
 4. **E1-16, E1-17 y E1-18 en versión mínima:** builder, orquestador y submission, para subir a Kaggle y obtener el primer puntaje (**hito H1**).
 
 En paralelo, porque no dependen de los modelos (se trabajan con SceneJSON sintéticos):
-- **E1-14 y E1-15:** color dominante y relaciones espaciales.
 - **E1-20, E1-21 y E1-22:** DSL, category matcher y ejecutor determinista. El matcher tiene que entender nombres en español.
 - **E1-25:** carga del LLM y benchmark de memoria y latencia en T4.
 

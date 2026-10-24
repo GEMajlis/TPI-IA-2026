@@ -108,15 +108,17 @@ Las referencias a campos del SceneJSON se resuelven siempre contra `data/competi
 - **Aceptación:** tests con máscaras sintéticas para cada una de las 9 regiones y los bordes; máscara vacía → fallback a la caja con la marca correspondiente.
 - **Nota (interfaz):** `properties_from_mask(mask, small_max, medium_max, source)` / `properties_from_rle(...)` / `properties_from_config(mask, cfg)` → `GeometricProperties` (`area`, `area_ratio`, `centroid` [x, y], `position`, `size`, `mask_bbox` xyxy exclusivo, `source`). Para máscaras vacías, `ensure_nonempty(mask, box)` devuelve la caja rasterizada (al menos 1 px) con `source="box_fallback"`: el builder (E1-16) debe guardar **esa** máscara en el RLE, así `area_ratio > 0` y las propiedades coinciden con la máscara entregada. Convenciones de `docs/schema_notes.md` §6; `size_label` usa los mismos cortes que `eval.lvis_federated.size_label`.
 
-### [ ] E1-14 · Color dominante — ESC
+### [x] E1-14 · Color dominante — ESC
 - **Objetivo:** `scene/scene/color.py`: k-means en Lab sobre los píxeles de la máscara, mapeo a una paleta nombrada y una confianza (proporción del cluster dominante).
 - **Depende de:** E1-13
 - **Aceptación:** tests con parches de color sólido y con mezcla; paleta definida en la config.
+- **Nota (interfaz):** `dominant_color(image, mask, palette, k, max_pixels, min_pixels, seed)` / `dominant_color_from_config(image, mask, cfg)` → `DominantColor(name, rgb, confidence, lab_distance)` o `None` si la máscara tiene menos de `min_pixels` (color desconocido). k-means de sklearn en Lab (OpenCV, float) con submuestreo y semilla fija; paleta de 11 colores en `scene.color.palette`. ~40 ms por objeto en CPU.
 
-### [ ] E1-15 · Relaciones espaciales — ESC
+### [x] E1-15 · Relaciones espaciales — ESC
 - **Objetivo:** `scene/scene/relations.py`: `left_of`, `right_of`, `above`, `below`, `near`, `overlaps`, `on_top_of`, con márgenes configurables, tope de pares y valores de relación del schema.
 - **Depende de:** E1-13
 - **Aceptación:** tests sintéticos por relación, incluidos casos límite (centroides alineados → sin relación horizontal).
+- **Nota (interfaz):** `compute_relations(objs: list[RelObject], width, height, cfg["scene"]["relations"]) -> RelationsResult(relations, extra_relations, stats)`. `RelObject(id, centroid, box, mask, confidence)` usa la caja de la máscara (`mask_bbox`). `relations` solo con el enum del schema (direccionales por centroide con margen, en los dos sentidos; `overlaps` simétrica por IoU de máscaras); `near` y `on_top_of` van en `extra_relations` (D-04). Operaciones con máscaras solo en pares cuyas cajas se tocan. El tope `max_relations` prioriza pares de mayor confianza y nunca deja una relación sin su inversa. En una imagen real con 50 objetos: 4370 relaciones en 0,07 s. **Ojo (E1-18):** con ~100 objetos son ~17 000 relaciones (~1 MB de JSON por escena); si el submission queda muy pesado, bajar `max_relations` o limitar los objetos que entran a relaciones.
 
 ### [ ] E1-16 · Builder del SceneJSON — ESC
 - **Objetivo:** `scene/scene/builder.py`: arma el SceneJSON (imagen, objetos con ids únicos, clase, confianza, bbox, RLE, propiedades, atributos, relaciones y origen observado/derivado/desconocido) y lo valida con E1-03.
