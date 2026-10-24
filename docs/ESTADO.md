@@ -46,9 +46,10 @@ ruff check . && ruff format --check .
 | E1-30 Experimentos | Umbral 0,18 adoptado (+4,7 F1 holdout); post-proceso solo en chicas descartado (D-17) | `configs/experiments/`, `scripts/compare_runs.py` |
 | E1-22 Ejecutor | Ejecuta el DSL sobre el SceneJSON con filtros, evidencia, confianza y estados `unsupported` / `insufficient_information` / `ambiguous` | `src/scene/qa/executor.py` |
 | E1-23 Modo determinista (falta Kaggle) | Benchmark → DSL sin LLM y `questions` en las 20 escenas del benchmark | `src/scene/qa/structured_adapter.py`, `scripts/run_qa.py` |
-| E1-31 Análisis de errores (falta QA) | Embudo por instancia, tipos de FP, peores clases y galería; conclusiones en [error_analysis.md](error_analysis.md) | `src/eval/error_analysis.py`, `scripts/analyze_errors.py` |
+| E1-31 Análisis de errores | Embudo por instancia, tipos de FP, peores clases y galería; conclusiones en [error_analysis.md](error_analysis.md) | `src/eval/error_analysis.py`, `scripts/analyze_errors.py` |
 | E1-24 Evaluación de QA | Fidelidad de la evidencia, re-ejecución del DSL, exactitud contra el SceneJSON oráculo y atribución percepción/interpretación | `src/eval/qa_eval.py`, `src/eval/oracle.py`, `scripts/eval_qa.py` |
-| E1-28 `questions_llm` (falta T4) | Pregunta en texto → LLM → DSL → mismo ejecutor; descripción verificada con respaldo determinista | `src/scene/qa/llm_mode.py`, `scripts/run_qa_llm.py` |
+| E1-28 `questions_llm` | Pregunta en texto → LLM → DSL → mismo ejecutor; descripción verificada con respaldo determinista | `src/scene/qa/llm_mode.py`, `scripts/run_qa_llm.py` |
+| E1-25 a E1-27 LLM | Qwen2.5-3B fp16 (D-12); intérprete con prompt v2 (D-18): JSON válido 100 %; 18/20 descripciones fieles | `src/scene/llm/` |
 | E1-10 Post-proceso | Umbral, NMS por clase, NMS entre clases (apagado) y tope, con conteos en la traza | `src/scene/detection/postprocess.py` |
 
 **Resultados en Kaggle (120 imágenes de dev):**

@@ -59,7 +59,7 @@ Formato: fecha · decisión · alternativa descartada · evidencia. Las entradas
 
 ## 2026-10-24 · LLM (E1-25 a E1-27, en desarrollo)
 
-### D-12 · **pendiente de corrida T4** · Selección del LLM
+### D-12 · **cerrada (2026-10-24)** · Selección del LLM: Qwen2.5-3B-Instruct en fp16
 - **Implementación:** los pesos se descargan en tiempo de ejecución desde Hugging Face. Kaggle
   aporta la T4; los modelos públicos no requieren credenciales. Para un repositorio privado se usa
   `HF_TOKEN` como Secret de Kaggle, nunca dentro del código.
@@ -71,11 +71,18 @@ Formato: fecha · decisión · alternativa descartada · evidencia. Las entradas
 
 | Candidato | Precisión | Memoria de carga (MiB) | Latencia media (ms) | p95 (ms) | Decisión |
 |---|---:|---:|---:|---:|---|
-| Qwen2.5-3B-Instruct | fp16 | pendiente T4 | pendiente T4 | pendiente T4 | provisional |
-| Qwen3-4B | 4-bit NF4 | pendiente T4 | pendiente T4 | pendiente T4 | pendiente |
+| Qwen2.5-3B-Instruct | fp16 | 5994 | 5331 | 7310 | **elegido** |
+| Qwen3-4B | 4-bit NF4 | 2601 | 10928 | 16995 | descartado |
 
-No se completan E1-25/E1-26/E1-27 hasta reemplazar estos pendientes por mediciones reales,
-validar al menos 95 % del JSON sobre el benchmark e inspeccionar las 20 descripciones de E1-16.
+Medido en Tesla T4 (torch 2.11, Python 3.13), 3 prompts, 1 calentamiento + 3 repeticiones,
+~125–134 tokens de salida (`outputs/llm_benchmark.json` del run de Kaggle).
+
+- **Decisión:** Qwen2.5-3B-Instruct en fp16. Es el doble de rápido (media y p95) y entra holgado
+  en los 16 GB de la T4; el LLM corre después de OWLv2 y SAM2, así que la memoria no es la
+  restricción. Con el prompt v2 (D-18) ya cumple la calidad pedida sobre el benchmark: **JSON
+  válido 100 %** (meta ≥ 95 %), DSL igual al del modo determinista en las 60 consignas y 18/20
+  descripciones fieles. Qwen3-4B en 4-bit ahorra memoria pero no se necesita, y duplica la
+  latencia; no se evaluó su calidad sobre el benchmark.
 
 ## 2026-10-24 · E1-20 y E1-21
 
@@ -127,4 +134,13 @@ validar al menos 95 % del JSON sobre el benchmark e inspeccionar las 20 descripc
 - **Decisión:** `interpreter_v2.txt` (y `llm.interpreter.prompt_version` apunta a la v2). Los ejemplos usan categorías que no están en el benchmark (taza, libro, paraguas, gato, lámpara, silla, auto), cubren todas las ops (incluidos `describe`, `attribute`, filtro de color y `left_of`) y combinan la redacción coloquial con la de "la instancia de la categoría X", que es el formato de entrada esperado (formato, no contenido). La v1 se conserva para trazabilidad.
 - **Control:** `tests/test_interpreter_prompt.py` falla si un ejemplo del prompt usa una categoría (en inglés o en español, con plurales simples) o una pregunta del benchmark, y si algún ejemplo no es un DSL válido. Sobre la v1 detecta anillo, collar, mochila y reloj.
 - También se cambió el prompt de latencia de `scripts/benchmark_llm.py`, que repetía la misma pregunta.
+- **Efecto medido (Kaggle, Qwen2.5-3B, 20 imágenes del benchmark, misma percepción):**
+
+  | | v1 | v2 |
+  |---|---|---|
+  | JSON válido / DSL igual al estructurado | 0,65 / 0,65 | **1,00 / 1,00** |
+  | Descripciones | 20 `unsupported` (sin ejemplo de `describe`) | 18 fieles, 2 con plantilla |
+  | Exactitud contra el oráculo (40 cerradas) | 0,700 (DEV-10-Q2 sin interpretar) | **0,725** (= modo determinista) |
+
+  Comparación controlada: solo cambia el archivo del prompt.
 

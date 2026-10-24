@@ -56,7 +56,7 @@ En `error_analysis/gallery/`, con el GT en verde (FN en amarillo) y las predicci
 
 ## 5. Preguntas (modo determinista, E1-23)
 
-Las 60 consignas del benchmark se responden. 9 quedan con un estado distinto de `ok`: 5 `ambiguous` (1 de posición, 3 de relación y 1 de tamaño: había varias instancias y se usó la de mayor confianza, D-10) y 4 `insufficient_information` (2 de relación y 2 de tamaño: no se detectó el objeto). Ninguna queda `unsupported`. La atribución de cada error de QA a percepción o a razonamiento queda para E1-24, con el SceneJSON oráculo.
+Las 60 consignas del benchmark se responden. 9 quedan con un estado distinto de `ok`: 5 `ambiguous` (1 de posición, 3 de relación y 1 de tamaño: había varias instancias y se usó la de mayor confianza, D-10) y 4 `insufficient_information` (2 de relación y 2 de tamaño: no se detectó el objeto). Ninguna queda `unsupported`. **Atribución (E1-24, SceneJSON oráculo):** con el mismo ejecutor sobre el JSON construido desde el GT, el modo determinista coincide en 29 de las 40 cerradas (72,5 %: count 40 %, existence 90 %, position 100 %, relation 80 %, size 60 %). Los 11 errores son de **percepción**: 6 conteos con instancias de más o de menos, 1 existencia alucinada (DEV-23) y 4 preguntas sobre objetos que no se detectaron. El modo LLM (Qwen2.5-3B, prompt v2) da exactamente las mismas respuestas: su DSL coincide con el estructurado en las 60 consignas, así que no agrega errores de interpretación. **El cuello de botella de QA es el mismo que el de la percepción** (instancias chicas y repetidas que no se detectan); contar es lo más frágil, porque exige acertar todas las instancias.
 
 ## 6. Qué motiva para la Etapa 2
 

@@ -182,36 +182,39 @@ Las referencias a campos del SceneJSON se resuelven siempre contra `data/competi
 
 ## LLM
 
-### [ ] E1-25 · Carga del LLM y benchmark de recursos — LLM
+### [x] E1-25 · Carga del LLM y benchmark de recursos — LLM
 - **Objetivo:** `llm/model.py`: carga configurable (Qwen2.5-3B-Instruct o Qwen3-4B; fp16 o 4-bit), generación con semilla fija y temperatura 0. Medir memoria y latencia en T4.
 - **Depende de:** E1-01
 - **Aceptación:** tabla de memoria y latencia por candidato en `docs/DECISIONS.md` con la elección justificada.
 - **En desarrollo (2026-10-24):** wrapper lazy para fp16/4-bit y `scripts/benchmark_llm.py`
-  implementados. Falta ejecutar ambos candidatos en T4 y cerrar D-12 con mediciones reales.
+  implementados. **Medido en T4 (D-12):** Qwen2.5-3B fp16 6,0 GB y 5,3 s/consulta (elegido);
+  Qwen3-4B 4-bit 2,6 GB y 10,9 s.
 
-### [ ] E1-26 · Intérprete pregunta → DSL — LLM
+### [x] E1-26 · Intérprete pregunta → DSL — LLM
 - **Objetivo:** `llm/interpreter.py` con prompt few-shot versionado. Recibe **solo** el texto de la pregunta, produce JSON, valida contra el DSL, reintenta una vez ante error y, si vuelve a fallar, devuelve `unsupported`. El mapeo de la categoría lo hace E1-21, no el LLM.
 - **Depende de:** E1-25, E1-20, E1-21
 - **Aceptación:** validez del JSON ≥ 95 % y coincidencia del DSL con el del modo determinista medida sobre el benchmark; casos no soportados y ambiguos incluidos en los few-shot.
 - **En desarrollo (2026-10-24):** intérprete, prompt versionado, validación, resolución de
   categorías por inyección y fallback implementados con tests. **Prompt v2 (D-18):** sin
   categorías ni preguntas del benchmark y con ejemplos de todas las ops (incluido `describe`).
-  Falta medir en la T4: `json_valid_rate` (≥ 0,95) y `dsl_match_rate` los da `scripts/eval_qa.py`.
+  **Medido en T4:** JSON válido 1,00 y DSL igual al estructurado 1,00 en las 60 consignas
+  (con la v1: 0,65 y 0,65).
 
-### [ ] E1-27 · Verbalización y descripción — LLM
+### [x] E1-27 · Verbalización y descripción — LLM
 - **Objetivo:** `qa/verbalize.py` (respuesta en lenguaje natural a partir del resultado del ejecutor) y `llm/describer.py` (descripción a partir de un resumen textual compacto del SceneJSON). Verificador de fidelidad: cada categoría y número mencionado debe existir en el JSON.
 - **Depende de:** E1-25, E1-16
 - **Aceptación:** las 20 descripciones generadas, con la métrica de fidelidad calculada; se registran los casos con afirmaciones no sustentadas.
 - **En desarrollo (2026-10-24):** verbalización, resumen compacto, descriptor y verificador de
   categorías/números implementados con tests. La fidelidad de las 20 descripciones la mide
   `scripts/eval_qa.py` (`llm.descriptions`: proporción fiel, respaldos con la plantilla y consignas
-  que el intérprete no tomó como `describe`). Falta la corrida en la T4.
+  que el intérprete no tomó como `describe`). **Medido en T4:** 18/20 descripciones fieles; las 2
+  restantes usan la plantilla determinista.
 
-### [ ] E1-28 · Integración de `questions_llm` — LLM
+### [x] E1-28 · Integración de `questions_llm` — LLM
 - **Objetivo:** genera `questions_llm` (con `interpreted_query`) y las descripciones para las 20 imágenes del benchmark mediante intérprete → mismo ejecutor → verbalización, e integra el resultado en el submission.
 - **Depende de:** E1-26, E1-27, E1-23
 - **Aceptación:** el submission valida con `questions_llm` completo; E1-24 se extiende al modo LLM.
-- **Nota (interfaz):** código listo, **falta la corrida con Qwen 3B en la T4**. `scene/qa/llm_mode.py::answer_questions_llm(questions, scene, interpreter, executor, describer, names)`: el intérprete (E1-26) recibe solo `question`; su DSL lo ejecuta el mismo `Executor` de E1-22; si el intérprete falla o marca la pregunta como no soportada, se ejecuta `Query(op="unsupported", reason=...)`, así `interpreted_query` siempre es un DSL válido. `op="describe"` → `SceneDescriber` (E1-27); si la descripción no es fiel tras el reintento se usa la plantilla determinista (`status_detail` lo indica). Cada item lleva `interpreter` (estado, intentos, errores, salida cruda y estado del descriptor). `scripts/run_qa_llm.py --run <run>` agrega `questions_llm` a las escenas del benchmark (etapa `qa_llm` en la traza, `qa_llm.csv`); `eval_qa.py` evalúa los dos modos (validez del JSON, coincidencia del DSL con el estructurado y exactitud).
+- **Nota (interfaz):** corrido en la T4 sobre las 20 imágenes del benchmark: modo LLM con exactitud contra el oráculo 0,725 (igual al determinista), evidencia y re-ejecución 100 %, submission válido con `questions_llm`. `scene/qa/llm_mode.py::answer_questions_llm(questions, scene, interpreter, executor, describer, names)`: el intérprete (E1-26) recibe solo `question`; su DSL lo ejecuta el mismo `Executor` de E1-22; si el intérprete falla o marca la pregunta como no soportada, se ejecuta `Query(op="unsupported", reason=...)`, así `interpreted_query` siempre es un DSL válido. `op="describe"` → `SceneDescriber` (E1-27); si la descripción no es fiel tras el reintento se usa la plantilla determinista (`status_detail` lo indica). Cada item lleva `interpreter` (estado, intentos, errores, salida cruda y estado del descriptor). `scripts/run_qa_llm.py --run <run>` agrega `questions_llm` a las escenas del benchmark (etapa `qa_llm` en la traza, `qa_llm.csv`); `eval_qa.py` evalúa los dos modos (validez del JSON, coincidencia del DSL con el estructurado y exactitud).
 
 ## Experimentación, análisis y entrega
 
@@ -227,7 +230,7 @@ Las referencias a campos del SceneJSON se resuelven siempre contra `data/competi
 - **Aceptación:** mejora sobre holdout justificada (o, si no mejora, documentada); **F1 ≥ 0,50 en dev → hito H3** junto con E1-28 y E1-31.
 - **Nota:** dos comparaciones controladas contra la línea base, una variable cada una, decididas con el holdout de E1-29: (1) **umbral 0,10 → 0,18**, F1 de cajas en holdout 0,619 → 0,666, **adoptada** (D-14); (2) **post-proceso solo en máscaras chicas**, mejora con cajas GT (85,2 % vs 84,1 % con IoU ≥ 0,5) pero no end-to-end (F1 de máscaras en holdout 0,614 → 0,609), **descartada** (D-17). Herramientas: `configs/experiments/*.yaml`, `scripts/compare_runs.py` (tuning/holdout, por tamaño, consistencia y costo; fila en `outputs/experiments.csv`) y la variante `post_small` del oráculo. F1 de detección en dev 0,653 ≥ 0,50 (parte de H3).
 
-### [ ] E1-31 · Análisis de errores y propagación — EVA
+### [x] E1-31 · Análisis de errores y propagación — EVA
 - **Objetivo:** `eval/error_analysis.py`:
   - Embudo de instancias a partir de las trazas (raw → umbral → NMS → SAM2 → JSON) contra el GT.
   - Errores por tamaño y por clase.
@@ -235,7 +238,7 @@ Las referencias a campos del SceneJSON se resuelven siempre contra `data/competi
   - Atribución de errores de QA a percepción o a razonamiento usando el oráculo.
 - **Depende de:** E1-12, E1-24, E1-28
 - **Aceptación:** sección de notebook y `docs/error_analysis.md` con conclusiones que motivan la extensión de la Etapa 2.
-- **Nota:** percepción corrida en Kaggle sobre dev y conclusiones en `docs/error_analysis.md` (55,5 % de las instancias llega a TP de máscara; se pierden sobre todo en detección: 11,6 % sin caja, 8,4 % con otra clase, 16,6 % bajo el umbral; small 40 % vs ~72 % medium/large → motiva tiling tipo SAHI para la Etapa 2). **Falta:** la galería y la atribución de QA (con E1-24/E1-28) y la sección de notebook (E1-32). `eval/error_analysis.py`: `funnel_rows`/`funnel_summary` (primera etapa en la que se pierde cada instancia GT: `no_box` → `wrong_class` → `below_threshold` → `nms` → `max_detections` → `box_match` → `mask` → `ok`; las etapas de detección se recalculan desde la caché cruda con el mismo post-proceso y piden cobertura IoU ≥ 0,5, las dos últimas usan el matching federado), `fp_types` (duplicado, localización, confusión de clase, categoría negativa, fondo), `per_image_scores`, `pick_gallery` (correctas, ambiguas y fallidas, sin superposición), `draw_case` (GT verde, FN amarillo, TP azul, FP rojo, ignoradas gris) y `worst_classes`. `scripts/analyze_errors.py --run <run>` usa la config de inferencia del run y escribe `error_analysis/` (summary.json, funnel.csv, fp_types.csv, per_image.csv, worst_classes.csv, gallery/).
+- **Nota:** percepción corrida en Kaggle sobre dev y conclusiones en `docs/error_analysis.md` (55,5 % de las instancias llega a TP de máscara; se pierden sobre todo en detección: 11,6 % sin caja, 8,4 % con otra clase, 16,6 % bajo el umbral; small 40 % vs ~72 % medium/large → motiva tiling tipo SAHI para la Etapa 2). La atribución de QA la da E1-24: en los dos modos los 11 errores sobre 40 cerradas son de percepción (6 de conteo, 1 existencia alucinada, 4 objetos no detectados). Falta solo la sección de notebook (E1-32). `eval/error_analysis.py`: `funnel_rows`/`funnel_summary` (primera etapa en la que se pierde cada instancia GT: `no_box` → `wrong_class` → `below_threshold` → `nms` → `max_detections` → `box_match` → `mask` → `ok`; las etapas de detección se recalculan desde la caché cruda con el mismo post-proceso y piden cobertura IoU ≥ 0,5, las dos últimas usan el matching federado), `fp_types` (duplicado, localización, confusión de clase, categoría negativa, fondo), `per_image_scores`, `pick_gallery` (correctas, ambiguas y fallidas, sin superposición), `draw_case` (GT verde, FN amarillo, TP azul, FP rojo, ignoradas gris) y `worst_classes`. `scripts/analyze_errors.py --run <run>` usa la config de inferencia del run y escribe `error_analysis/` (summary.json, funnel.csv, fp_types.csv, per_image.csv, worst_classes.csv, gallery/).
 
 ### [ ] E1-32 · Generador de notebook y corrida en Kaggle — ENT
 - **Objetivo:** `scripts/build_notebook.py` genera `TPI_IA_2026P_<grupo>.ipynb`: instalación, `%%writefile` de los módulos y secciones en Markdown (EDA, metodología, resultados, experimentos, análisis, submission). Separa claramente GT, predicciones y datos derivados.
