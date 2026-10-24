@@ -10,7 +10,7 @@ Resumen para el grupo: qué está hecho, qué resultados tenemos y qué falta. E
 
 | Pendiente | Qué falta | Quién |
 |---|---|---|
-| **E1-32 · Notebook de Kaggle** | `TPI_IA_2026P_<grupo>` que corra de punta a punta sin archivos externos, con secciones en Markdown y todas las salidas guardadas | a repartir |
+| **E1-32 · Notebook de Kaggle** | Generada `TPI_IA_2026P_15.ipynb`; falta `Run All` en T4 y guardar las salidas ([guía](KAGGLE_RUNBOOK.md)) | Grupo 15 |
 | **E1-33 · Reporte técnico** | `report/REPORTE.md` (portada, dataset, metodología, resultados, discusión y errores, conclusiones); cada número sale del run final | a repartir |
 | **E1-34 · Checklist final** | Condiciones de validez y checklist de promoción, punto por punto | a repartir |
 
@@ -104,8 +104,9 @@ ruff check . && ruff format --check .
 ## Pendientes del grupo
 
 - [x] **Subir el submission** y anotar el puntaje: `PipelineScore = 0.6509`.
-- [ ] **Definir el número de grupo** (nombre de la notebook: `TPI_IA_2026P_<grupo>`).
-- [ ] **Decidir si el repo de GitHub es público.** Si lo es, la notebook final puede clonarlo (es un recurso público que descarga la propia notebook). Si es privado, E1-32 tiene que meter el código en la notebook con `%%writefile`.
+- [x] **Definir el número de grupo:** Grupo 15, curso 5K1; notebook `TPI_IA_2026P_15`.
+- [x] **Resolver la portabilidad de la notebook:** es autocontenida y escribe el código con
+  `%%writefile`; no depende de que el repositorio sea público.
 - [ ] **Repartir E1-32, E1-33 y E1-34.**
 - [ ] **Pasar `desarrollo` a `main`** con un PR antes de entregar.
 - [ ] **Preparar la defensa:** 10 minutos; todos tienen que poder explicar cualquier parte.

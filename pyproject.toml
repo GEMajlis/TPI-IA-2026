@@ -27,7 +27,7 @@ dependencies = [
 [project.optional-dependencies]
 # lvis-api solo se usa como referencia de AP en evaluación.
 lvis = ["lvis"]
-dev = ["pytest", "ruff"]
+dev = ["pytest", "ruff", "nbformat>=5.10"]
 llm = [
     "accelerate>=0.30",
     "bitsandbytes>=0.43; platform_system == 'Linux'",

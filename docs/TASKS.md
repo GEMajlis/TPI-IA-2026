@@ -250,6 +250,9 @@ Las referencias a campos del SceneJSON se resuelven siempre contra `data/competi
 - **Objetivo:** `scripts/build_notebook.py` genera `TPI_IA_2026P_<grupo>.ipynb`: instalación, `%%writefile` de los módulos y secciones en Markdown (EDA, metodología, resultados, experimentos, análisis, submission). Separa claramente GT, predicciones y datos derivados.
 - **Depende de:** E1-31
 - **Aceptación:** corre de punta a punta en Kaggle con GPU y sin archivos externos; queda guardada con todas sus salidas; genera `submission.csv` y los CSV y JSON de métricas.
+- **En desarrollo (2026-10-24):** generador, configuración del Grupo 15, notebook autocontenida,
+  validación nbformat y guía de ejecución implementados. Falta ejecutar `Run All` en Kaggle,
+  guardar la versión con salidas y descargar `grupo15_entrega_artifacts.zip`.
 
 ### [ ] E1-33 · Reporte técnico — ENT
 - **Objetivo:** `report/REPORTE.md` con la estructura sugerida (portada, dataset, metodología, resultados, discusión y errores, conclusiones). Las tablas se generan desde los CSV del run final para garantizar correspondencia con la notebook. Declara modelos, recursos y código reutilizado.

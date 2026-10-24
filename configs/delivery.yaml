@@ -1,0 +1,19 @@
+delivery:
+  group_number: "15"
+  course: 5K1
+  kaggle_team: "Grupo 15 - 5K1"
+  members:
+    - name: Gonzalo Ezequiel Majlis
+      student_id: "95047"
+    - name: Tomas Morinigo
+      student_id: "95639"
+    - name: Ramiro Figueroa Manzi
+      student_id: "96306"
+    - name: Franco Manuel Lucero
+      student_id: "96311"
+  notebook:
+    output: notebooks/TPI_IA_2026P_15.ipynb
+    run_oracle_segmentation: true
+    run_threshold_tuning: true
+    run_controlled_experiment: true
+    run_llm_benchmark: true
