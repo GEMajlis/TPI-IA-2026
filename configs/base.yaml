@@ -62,6 +62,8 @@ segmentation:
     largest_component: true
     fill_holes: true
     max_hole_ratio: 0.05    # huecos de hasta 5 % del área de la máscara
+    # Post-procesar solo máscaras crudas con área relativa menor a esto (null = todas). E1-30.
+    apply_below_area_ratio: null
 
 scene:
   # Umbrales de tamaño sobre area_ratio (el schema no los fija; ver docs/eda_findings.md).

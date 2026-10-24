@@ -54,8 +54,15 @@ def fill_holes(mask: np.ndarray, max_hole_ratio: float) -> np.ndarray:
 def postprocess_mask(
     mask: np.ndarray, box_xyxy: tuple[float, float, float, float], pp_cfg: dict[str, Any]
 ) -> np.ndarray:
-    """Aplica los pasos activos en orden: recorte → componente principal → huecos."""
+    """Aplica los pasos activos en orden: recorte → componente principal → huecos.
+
+    Con `apply_below_area_ratio` (E1-30) solo se post-procesan las máscaras crudas cuya área
+    relativa es menor que ese valor; las demás se devuelven tal cual las da SAM2.
+    """
     out = mask.astype(bool)
+    limit = pp_cfg.get("apply_below_area_ratio")
+    if limit is not None and out.mean() >= limit:
+        return out
     if pp_cfg.get("crop_to_box", True):
         out = crop_to_box(out, box_xyxy, pp_cfg["box_margin"])
     if pp_cfg.get("largest_component", True):

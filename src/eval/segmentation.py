@@ -33,30 +33,39 @@ def gt_detections(img: ImageGT) -> list[Detection]:
 
 
 def oracle_rows(
-    img: ImageGT, segmenter: Any, image: np.ndarray, pp_cfg: dict[str, Any]
+    img: ImageGT,
+    segmenter: Any,
+    image: np.ndarray,
+    pp_cfg: dict[str, Any],
+    small_max: float | None = None,
 ) -> list[dict[str, Any]]:
     """IoU con GT de cada instancia, para la máscara cruda de SAM2 y la post-procesada.
 
-    `segmenter` debe estar construido con el post-proceso apagado (así devuelve la cruda).
+    Con `small_max` agrega la variante de E1-30 (`post_small`): post-proceso solo si la máscara
+    cruda tiene área relativa menor a `small_max`. `segmenter` debe estar construido con el
+    post-proceso apagado (así devuelve la cruda).
     """
+    pp_all = {**pp_cfg, "apply_below_area_ratio": None}
     dets = gt_detections(img)
     by_id = {str(inst.id): inst for inst in img.instances}
     rows = []
     for obj in segmenter.segment(image, dets):
         inst = by_id[obj.detection.raw_query]
         gmask = img.mask(inst)
-        post = postprocess_mask(obj.mask, obj.detection.box_xyxy, pp_cfg)
-        rows.append(
-            {
-                "image_id": img.image_id,
-                "gt_id": inst.id,
-                "category_id": inst.category_id,
-                "area_ratio": float(gmask.sum()) / (img.width * img.height),
-                "mask_score": obj.mask_score,
-                "iou_raw": mask_iou(obj.mask, gmask),
-                "iou_post": mask_iou(post, gmask),
-            }
-        )
+        post = postprocess_mask(obj.mask, obj.detection.box_xyxy, pp_all)
+        row = {
+            "image_id": img.image_id,
+            "gt_id": inst.id,
+            "category_id": inst.category_id,
+            "area_ratio": float(gmask.sum()) / (img.width * img.height),
+            "mask_score": obj.mask_score,
+            "iou_raw": mask_iou(obj.mask, gmask),
+            "iou_post": mask_iou(post, gmask),
+        }
+        if small_max is not None:
+            small = obj.mask.mean() < small_max
+            row["iou_post_small"] = row["iou_post"] if small else row["iou_raw"]
+        rows.append(row)
     return rows
 
 
@@ -67,7 +76,8 @@ def summarize_oracle(rows: list[dict[str, Any]], cfg: dict) -> dict[str, Any]:
 
     def stats(sub: list[dict[str, Any]]) -> dict[str, Any]:
         out: dict[str, Any] = {"n": len(sub)}
-        for kind in ("raw", "post"):
+        kinds = [k for k in ("raw", "post", "post_small") if sub and f"iou_{k}" in sub[0]]
+        for kind in kinds or ("raw", "post"):
             ious = np.array([r[f"iou_{kind}"] for r in sub]) if sub else np.zeros(0)
             out[f"miou_{kind}"] = float(ious.mean()) if len(ious) else None
             out[f"frac_iou_ge_thr_{kind}"] = float((ious >= thr).mean()) if len(ious) else None

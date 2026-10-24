@@ -60,9 +60,10 @@ def main() -> None:
     pp_cfg = cfg["segmentation"]["postprocess"]
 
     recs = [r for r in list_images(cfg, "dev") if r.image_id in gt][: args.limit]
+    small_max = cfg["scene"]["size_thresholds"]["small_max"]
     rows = []
     for k, rec in enumerate(recs, 1):
-        rows += oracle_rows(gt[rec.image_id], segmenter, load_image(rec), pp_cfg)
+        rows += oracle_rows(gt[rec.image_id], segmenter, load_image(rec), pp_cfg, small_max)
         print(f"{k}/{len(recs)} {rec.image_id}", flush=True)
 
     out = {

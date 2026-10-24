@@ -218,6 +218,7 @@ Las referencias a campos del SceneJSON se resuelven siempre contra `data/competi
 - **Objetivo:** al menos una comparación contra la línea base cambiando una sola variable (candidatos: sinónimos en el vocabulario, detector alternativo, NMS entre clases, umbral por clase). Registro en `outputs/experiments.csv` con hipótesis, cambio, métricas de tuning y holdout, costo y conclusión. Si hace falta, implementar el detector alternativo (`detection/yolo_world.py` o `detection/gdino.py` con chunks).
 - **Depende de:** E1-29
 - **Aceptación:** mejora sobre holdout justificada (o, si no mejora, documentada); **F1 ≥ 0,50 en dev → hito H3** junto con E1-28 y E1-31.
+- **En curso (2026-10-24):** experimento 1 = post-proceso de máscaras solo en máscaras chicas (hipótesis de D-15). Variable única `segmentation.postprocess.apply_below_area_ratio` (`null` → 0,00333) en `configs/experiments/e1_30_pp_solo_chicas.yaml`; control sin post-proceso en `e1_30_sin_postproceso.yaml`. El oráculo (`scripts/eval_segmentation.py`) ya reporta la variante `post_small` con cajas GT. `scripts/compare_runs.py --base <run> --exp <run>` compara en el mismo split tuning/holdout de E1-29 (F1 de cajas y máscaras, por tamaño, consistencia y segundos de SAM2) y agrega una fila a `outputs/experiments.csv`. Smoke test en CPU: cambian solo las máscaras medianas y grandes (24 de 70). Falta la corrida en Kaggle.
 
 ### [ ] E1-31 · Análisis de errores y propagación — EVA
 - **Objetivo:** `eval/error_analysis.py`:

@@ -1,0 +1,7 @@
+# E1-30 · Control: sin post-proceso de máscaras (máscara cruda de SAM2 para todos los objetos).
+# Sirve para separar el aporte del post-proceso en small del perjuicio en medium/large.
+segmentation:
+  postprocess:
+    crop_to_box: false
+    largest_component: false
+    fill_holes: false
