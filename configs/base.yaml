@@ -6,6 +6,9 @@ paths:
   # Raíz de la fuente de datos (misma estructura que el mount de Kaggle).
   data_root: data/dataset
   outputs: outputs/runs
+  # Caché por etapa compartida entre runs (detecciones crudas y máscaras), por hash de config.
+  cache: outputs/cache
+  submission: submission.csv   # nombre del archivo dentro del run
   dev_images: development/images
   test_images: tpi_ia_2026_competition_public/test_images
   test_index: tpi_ia_2026_competition_public/test_images.csv
@@ -48,17 +51,57 @@ detection:
     iou: 0.8
   max_detections: 100       # tope por imagen (EDA: máx. 66 instancias GT; schema admite 300)
 
+segmentation:
+  model_id: facebook/sam2.1-hiera-large
+  multimask_output: true    # 3 máscaras por caja; queda la de mayor IoU predicho
+  box_batch_size: 32        # cajas por pasada del decoder (el embedding de imagen se reutiliza)
+  mask_threshold: 0.0       # umbral sobre los logits de SAM2
+  postprocess:
+    crop_to_box: true
+    box_margin: 0.1         # fracción del ancho/alto de la caja
+    largest_component: true
+    fill_holes: true
+    max_hole_ratio: 0.05    # huecos de hasta 5 % del área de la máscara
+
 scene:
   # Umbrales de tamaño sobre area_ratio (el schema no los fija; ver docs/eda_findings.md).
   # Equivalen a 32² y 96² px (convención COCO) sobre una imagen de referencia de 640×480.
   size_thresholds:
     small_max: 0.00333
     medium_max: 0.03
+  color:
+    k: 3                    # clusters de k-means en Lab
+    max_pixels: 5000        # submuestreo de píxeles de la máscara (con la semilla global)
+    min_pixels: 20          # por debajo, el color queda desconocido (null)
+    # Paleta de 11 colores básicos (RGB de referencia).
+    palette:
+      black: [20, 20, 20]
+      white: [245, 245, 245]
+      gray: [128, 128, 128]
+      red: [200, 30, 30]
+      orange: [240, 140, 30]
+      yellow: [240, 220, 40]
+      green: [40, 150, 50]
+      blue: [40, 80, 200]
+      purple: [130, 50, 160]
+      pink: [240, 150, 180]
+      brown: [120, 75, 40]
+  relations:
+    # Márgenes como fracción del ancho (horizontal) o alto (vertical) de la imagen: si los
+    # centroides están más cerca que eso, no se afirma la relación.
+    h_margin: 0.02
+    v_margin: 0.02
+    overlap_min_iou: 0.01   # IoU de máscaras a partir del cual se dice `overlaps`
+    near_max_gap: 0.05      # distancia entre cajas / diagonal de la imagen (extra_relations)
+    on_top_min_x_overlap: 0.3  # solape horizontal / ancho del sujeto (extra_relations)
+    contact_px: 3           # dilatación para considerar que dos máscaras se tocan
+    max_relations: 20000    # tope del schema; se priorizan los pares de mayor confianza
 
 # Solo lo usa src/eval/ y src/eda/ (nunca la inferencia).
 eval:
   annotations: development/annotations.json
   iou_thr: 0.5
+  centroid_decimals: 2     # tolerancia del chequeo de centroides (el builder redondea a 2)
   # Bins de frecuencia por cantidad de imágenes donde la categoría es positiva (EDA: 3 a 11).
   frequency_bins:
     rare_max: 4

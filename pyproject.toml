@@ -20,6 +20,7 @@ dependencies = [
     "scikit-learn",
     "matplotlib",
     "torch",
+    "torchvision",  # lo requiere el procesador de SAM2 en transformers
     "transformers",
 ]
 

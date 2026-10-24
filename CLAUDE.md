@@ -18,7 +18,7 @@ Antes de tomar una tarea leé `docs/PLAN.md` (decisiones técnicas) y la tarea c
 
 1. Leé la tarea completa: objetivo, dependencias, entregables y criterios de aceptación.
 2. Verificá que las dependencias estén terminadas. Si no lo están, avisá en lugar de improvisar interfaces.
-3. Trabajá en una rama `task/<ID>-<slug>` (por ejemplo `task/E1-04-rle`).
+3. Trabajá en la rama `desarrollo` (una sola rama para todas las tareas; no se crean ramas por tarea). Un commit por tarea, con el ID en el mensaje.
 4. Escribí los tests primero o junto con el código. `pytest` tiene que pasar completo antes de cerrar.
 5. Actualizá el estado de la tarea en `docs/TASKS.md` (`[ ]` → `[x]`) y agregá una nota breve si cambió alguna interfaz.
 6. Si una decisión de `docs/PLAN.md` resulta inviable, **no la cambies en silencio**: documentá el motivo en `docs/DECISIONS.md` (fecha, decisión, alternativa, evidencia).

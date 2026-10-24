@@ -17,7 +17,7 @@ ruff check . && ruff format --check .
 
 **Regla de oro (motivo de desaprobación):** el GT solo se lee desde `src/eval/` y `src/eda/`. Nada en `src/scene/` puede importarlos ni tocar anotaciones. Lo verifica `tests/test_import_boundary.py`; no lo desactiven. Las demás reglas de trabajo están en [CLAUDE.md](../CLAUDE.md).
 
-## Qué hicimos (Etapa 1: 11 de 35 tareas)
+## Qué hicimos (Etapa 1: 16 de 35 tareas, y E1-17/E1-18 con el código listo)
 
 | Tarea | Qué quedó | Dónde |
 |---|---|---|
@@ -31,9 +31,19 @@ ruff check . && ruff format --check .
 | E1-07 Evaluador | P, R y F1 federados LVIS (cajas y máscaras), por tamaño, frecuencia y categoría | `src/eval/lvis_federated.py` |
 | E1-08 Vocabulario | Nombres limpios y sinónimos LVIS opcionales (120 o 215 queries) | `src/scene/detection/vocabulary.py` |
 | E1-09 OWLv2 | Detector base con caché de detecciones crudas e imágenes de debug | `src/scene/detection/owlv2.py`, `scripts/run_detection.py` |
+| E1-11 SAM2 | Máscaras con las cajas como prompt, post-proceso y caché RLE; F1 de máscaras | `src/scene/segmentation/`, `scripts/run_segmentation.py` |
+| E1-13 Propiedades | Área, área relativa, centroide, posición 3×3, tamaño y caja de la máscara; caja rasterizada si la máscara queda vacía | `src/scene/scene/properties.py` |
+| E1-14 Color | Color dominante por k-means en Lab, paleta de 11 colores, `null` si la máscara es muy chica | `src/scene/scene/color.py` |
+| E1-15 Relaciones | `left_of`, `right_of`, `above`, `below`, `overlaps` (schema) y `near`, `on_top_of` (campo aparte), con tope priorizado | `src/scene/scene/relations.py` |
+| E1-16 Builder | SceneJSON validado con origen observado/derivado/desconocido por campo | `src/scene/scene/builder.py` |
+| E1-17 Orquestador (falta Kaggle) | Pipeline completa con caché por etapa y traza; acepta imágenes sueltas | `src/scene/pipeline.py`, `scripts/run_pipeline.py` |
+| E1-18 Submission (falta envío) | 80 filas en el orden del sample, todas validadas | `src/scene/io/submission.py`, `scripts/make_submission.py` |
+| E1-19 Consistencia | Chequeo del SceneJSON contra su máscara y exactitud de posición/tamaño/color contra GT | `src/eval/scene_consistency.py`, `scripts/run_eval.py` |
+| E1-12 Oráculo de segmentación (falta Kaggle) | SAM2 con cajas GT: separa el error de SAM2 del del detector | `src/eval/segmentation.py`, `scripts/eval_segmentation.py` |
+| E1-29 Ajuste de umbral (falta Kaggle) | Barrido de umbral y NMS entre clases en tuning (80) / holdout (40) | `src/eval/tuning.py`, `scripts/tune_thresholds.py` |
 | E1-10 Post-proceso | Umbral, NMS por clase, NMS entre clases (apagado) y tope, con conteos en la traza | `src/scene/detection/postprocess.py` |
 
-OWLv2 ya corre de punta a punta en CPU (smoke test: 2 imágenes de dev, ~12 s por imagen, F1 de cajas 0,65 en esa muestra chica). Falta la primera corrida completa en Kaggle.
+**Línea base de detección en Kaggle (120 imágenes de dev, umbral 0,1 sin ajustar):** P = 0,52, R = 0,71, **F1 de cajas = 0,60**, cobertura evaluable 35 %. Ya supera el 0,50 de promoción. El punto débil es la precisión (~57 predicciones por imagen contra ~15 de GT): el ajuste de umbral (E1-29) debería mejorarla. **Línea base de segmentación en Kaggle (SAM2.1 hiera-large sobre esas cajas):** P = 0,47, R = 0,64, **F1 de máscaras = 0,54**. Se pierden 124 de los 1264 TP de cajas (~10 %) porque la máscara no llega a IoU 0,5: E1-12 (oráculo con cajas GT) dirá si es error de SAM2 o del post-proceso.
 
 ## En desarrollo
 
@@ -59,12 +69,11 @@ OWLv2 ya corre de punta a punta en CPU (smoke test: 2 imágenes de dev, ~12 s po
 La idea es armar primero un **corte vertical mínimo** y probarlo en Kaggle con GPU, antes de completar escena y QA. El riesgo principal es que los modelos no rindan o no entren en la T4, y el primer F1 real define en qué conviene invertir tiempo.
 
 1. ~~**E1-09 y E1-10 · Detector OWLv2 y post-proceso.**~~ Hecho.
-2. **Primera corrida en Kaggle:** `python scripts/run_detection.py --config configs/base.yaml configs/kaggle.yaml --split dev --eval` (120 imágenes de dev y F1 de cajas). Ahí sabemos qué tan lejos estamos del 0,50.
-3. **E1-11 y E1-13 · SAM2 y propiedades básicas** (centroide, área, posición, tamaño), lo que habilita el F1 de máscaras.
-4. **E1-16, E1-17 y E1-18 en versión mínima:** builder, orquestador y submission, para subir a Kaggle y obtener el primer puntaje (**hito H1**).
+2. ~~**Primera corrida en Kaggle.**~~ Hecho: F1 de cajas 0,60.
+3. ~~**SAM2 en Kaggle y E1-13 · propiedades básicas.**~~ Hecho: F1 de máscaras 0,54.
+4. **Primer envío (hito H1):** en Kaggle, `python scripts/run_pipeline.py --config configs/base.yaml configs/kaggle.yaml --split test benchmark` y después `python scripts/make_submission.py --config configs/base.yaml configs/kaggle.yaml --run latest --out /kaggle/working/submission.csv`. El código de E1-16, E1-17 y E1-18 ya está.
 
 En paralelo, porque no dependen de los modelos (se trabajan con SceneJSON sintéticos):
-- **E1-14 y E1-15:** color dominante y relaciones espaciales.
 - **E1-20, E1-21 y E1-22:** DSL, category matcher y ejecutor determinista. El matcher tiene que entender nombres en español.
 - **E1-25:** carga del LLM y benchmark de memoria y latencia en T4.
 
@@ -94,4 +103,7 @@ En paralelo, porque no dependen de los modelos (se trabajan con SceneJSON sinté
   - **D-06:** umbrales de tamaño;
   - **D-09:** sin NMS entre clases en la línea base;
   - **D-10:** qué responder cuando una pregunta en singular encuentra varias instancias.
-- [ ] **Repartir las tareas** según las líneas de [TASKS.md](TASKS.md): PER, ESC, QA y LLM se pueden llevar en paralelo. Cada tarea va en su rama `task/<ID>-<slug>`.
+- [x] **Repartir las tareas** (todo en la rama `desarrollo`, un commit por tarea, `git pull` antes de empezar y antes de cada push; cada uno toca su carpeta):
+  - **QA:** E1-20, E1-21, E1-22 y E1-23 (`src/scene/qa/`).
+  - **LLM:** E1-25, E1-26 y E1-27 (`src/scene/llm/`).
+  - **Evaluación:** E1-12, E1-19 y E1-29 (`src/eval/`, `scripts/`). Después: E1-24, E1-28, E1-30 y E1-31.

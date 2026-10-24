@@ -89,52 +89,61 @@ Las referencias a campos del SceneJSON se resuelven siempre contra `data/competi
 - **Aceptación:** tests unitarios de NMS; los parámetros salen de la config.
 - **Nota (interfaz):** `postprocess(dets, cfg["detection"]) -> PostprocessResult(detections, counts)`; `counts` = sobrevivientes por paso (`raw`, `threshold`, `nms_per_class`, [`nms_cross_class`], `max_detections`) y va a `extra.counts` de la traza. NMS en numpy (sin torchvision). Umbral inicial 0,1 (se ajusta en E1-29); NMS entre clases apagado (D-09).
 
-### [ ] E1-11 · SAM2 con cajas como prompt — PER
+### [x] E1-11 · SAM2 con cajas como prompt — PER
 - **Objetivo:** `segmentation/sam2.py` (batch de cajas por imagen, multimask y selección por IoU predicho) y `segmentation/postprocess.py` (recorte a la caja con margen, componente principal, relleno de huecos).
 - **Depende de:** E1-10
 - **Aceptación:** smoke test; máscaras de debug superpuestas; `mask_score` guardado; caché de máscaras por imagen (RLE en disco).
+- **Nota (interfaz):** `Sam2Segmenter.segment(image, dets) -> list[SegmentedObject]` y `build_segmenter(cfg, device)` en `segmentation/sam2.py`; `SegmentedObject` suma `raw_area` (píxeles antes del post-proceso). El embedding de imagen se calcula una vez y las cajas van en lotes de `box_batch_size`. Caché `masks/<image_id>.json` con RLE (`save_segmented`/`load_segmented`). `postprocess_mask` con pasos apagables desde `segmentation.postprocess`. `scripts/run_segmentation.py --from-run <run|latest>` reutiliza las detecciones de `run_detection.py` y con `--eval` da F1 de cajas y de máscaras. Requiere `torchvision` (lo pide el procesador de SAM2 en `transformers`). Los checkpoints `facebook/sam2.1-*` son de video y avisan al cargarse en `Sam2Model`: es lo esperado. Smoke test en CPU con `hiera-tiny`, 2 imágenes: ~9 s/imagen, F1 de máscaras 0,59.
 
 ### [ ] E1-12 · Evaluación de segmentación con oráculo — EVA
 - **Objetivo:** `eval/segmentation.py`: F1 de máscaras (usando E1-07 con IoU de máscaras), mIoU de pares matcheados, y una corrida de SAM2 con **cajas GT** como prompt (oráculo, solo en eval) para separar el error de detección del de segmentación.
 - **Depende de:** E1-07, E1-11
 - **Aceptación:** tabla comparativa entre cajas predichas y cajas GT en `metrics_segmentation.json`.
+- **Nota (interfaz):** código listo, **falta la corrida en Kaggle**. `oracle_rows` / `summarize_oracle` / `predicted_pairs_summary` en `eval/segmentation.py`: SAM2 con cajas GT y post-proceso apagado (una sola pasada evalúa la máscara cruda y la post-procesada), mIoU y fracción con IoU ≥ 0,5 por tamaño, correlación `mask_score`–IoU, y con cajas predichas cuántos TP de cajas se pierden en máscaras. `scripts/eval_segmentation.py --run <run de dev>` escribe `metrics_segmentation_oracle.json` (nombre propio, para no pisar `metrics_segmentation.json`) y `segmentation_oracle.csv`. Smoke test (hiera-tiny, 3 imágenes): mIoU oráculo 0,85; el post-proceso no mejora y baja medium de 0,94 a 0,90 → candidato a experimento (E1-30).
 
 ## Escena
 
-### [ ] E1-13 · Propiedades geométricas — ESC
+### [x] E1-13 · Propiedades geométricas — ESC
 - **Objetivo:** `scene/scene/properties.py`: área, área relativa, centroide, posición 3×3 (nombres oficiales) y tamaño `small|medium|large`, calculados desde la **máscara decodificada del RLE**.
 - **Depende de:** E1-03, E1-04
 - **Aceptación:** tests con máscaras sintéticas para cada una de las 9 regiones y los bordes; máscara vacía → fallback a la caja con la marca correspondiente.
+- **Nota (interfaz):** `properties_from_mask(mask, small_max, medium_max, source)` / `properties_from_rle(...)` / `properties_from_config(mask, cfg)` → `GeometricProperties` (`area`, `area_ratio`, `centroid` [x, y], `position`, `size`, `mask_bbox` xyxy exclusivo, `source`). Para máscaras vacías, `ensure_nonempty(mask, box)` devuelve la caja rasterizada (al menos 1 px) con `source="box_fallback"`: el builder (E1-16) debe guardar **esa** máscara en el RLE, así `area_ratio > 0` y las propiedades coinciden con la máscara entregada. Convenciones de `docs/schema_notes.md` §6; `size_label` usa los mismos cortes que `eval.lvis_federated.size_label`.
 
-### [ ] E1-14 · Color dominante — ESC
+### [x] E1-14 · Color dominante — ESC
 - **Objetivo:** `scene/scene/color.py`: k-means en Lab sobre los píxeles de la máscara, mapeo a una paleta nombrada y una confianza (proporción del cluster dominante).
 - **Depende de:** E1-13
 - **Aceptación:** tests con parches de color sólido y con mezcla; paleta definida en la config.
+- **Nota (interfaz):** `dominant_color(image, mask, palette, k, max_pixels, min_pixels, seed)` / `dominant_color_from_config(image, mask, cfg)` → `DominantColor(name, rgb, confidence, lab_distance)` o `None` si la máscara tiene menos de `min_pixels` (color desconocido). k-means de sklearn en Lab (OpenCV, float) con submuestreo y semilla fija; paleta de 11 colores en `scene.color.palette`. ~40 ms por objeto en CPU.
 
-### [ ] E1-15 · Relaciones espaciales — ESC
+### [x] E1-15 · Relaciones espaciales — ESC
 - **Objetivo:** `scene/scene/relations.py`: `left_of`, `right_of`, `above`, `below`, `near`, `overlaps`, `on_top_of`, con márgenes configurables, tope de pares y valores de relación del schema.
 - **Depende de:** E1-13
 - **Aceptación:** tests sintéticos por relación, incluidos casos límite (centroides alineados → sin relación horizontal).
+- **Nota (interfaz):** `compute_relations(objs: list[RelObject], width, height, cfg["scene"]["relations"]) -> RelationsResult(relations, extra_relations, stats)`. `RelObject(id, centroid, box, mask, confidence)` usa la caja de la máscara (`mask_bbox`). `relations` solo con el enum del schema (direccionales por centroide con margen, en los dos sentidos; `overlaps` simétrica por IoU de máscaras); `near` y `on_top_of` van en `extra_relations` (D-04). Operaciones con máscaras solo en pares cuyas cajas se tocan. El tope `max_relations` prioriza pares de mayor confianza y nunca deja una relación sin su inversa. En una imagen real con 50 objetos: 4370 relaciones en 0,07 s. **Ojo (E1-18):** con ~100 objetos son ~17 000 relaciones (~1 MB de JSON por escena); si el submission queda muy pesado, bajar `max_relations` o limitar los objetos que entran a relaciones.
 
-### [ ] E1-16 · Builder del SceneJSON — ESC
+### [x] E1-16 · Builder del SceneJSON — ESC
 - **Objetivo:** `scene/scene/builder.py`: arma el SceneJSON (imagen, objetos con ids únicos, clase, confianza, bbox, RLE, propiedades, atributos, relaciones y origen observado/derivado/desconocido) y lo valida con E1-03.
 - **Depende de:** E1-11, E1-13, E1-14, E1-15
 - **Aceptación:** el JSON valida contra el schema; imagen sin detecciones → JSON válido con lista vacía.
+- **Nota (interfaz):** `build_scene(image_id, image, segmented, cfg) -> (scene, stats)` en `scene/scene/builder.py`; valida con `assert_valid_scene`. Ids `obj_<n>` ordenados por confianza. `bbox` = caja del detector (observada); además `category_name`, `area_px`, `mask_bbox`, `mask_score`, `attributes` (color, confianza y RGB), `provenance` (observed/derived/unknown por campo), `source` y `extra_relations`. Si la máscara queda vacía se guarda la caja rasterizada (`source.mask = "box_fallback"`). Peso: una escena de 74 objetos ocupa ~750 KB, >80 % en `relations`.
 
 ### [ ] E1-17 · Orquestador end-to-end — INF
 - **Objetivo:** `scene/pipeline.py` y `scripts/run_pipeline.py`: recorre imágenes, corre las etapas con caché, traza y guarda el SceneJSON por imagen. Flags `--split`, `--limit` y `--from-stage`.
 - **Depende de:** E1-16, E1-05
 - **Aceptación:** corrida completa de dev en Kaggle con GPU; una segunda corrida que solo cambia el umbral reutiliza la caché de detecciones crudas.
+- **Nota (interfaz):** código listo, **falta la corrida completa en Kaggle**. `Pipeline(cfg, ctx, tracer, vocab, make_detector, make_segmenter, from_stage, debug).run(images)` en `scene/pipeline.py`; los modelos se cargan solo si hay algo que no está en caché. Caché compartida entre runs en `paths.cache`, con clave = hash de la config de la etapa y las anteriores (`stage_keys`): cambiar el umbral reutiliza las detecciones crudas; cambiar relaciones o color reutiliza también las máscaras (testeado con modelos falsos). Traza con `status=cached`. `scripts/run_pipeline.py` admite `--split` con varios splits, `--images`, `--limit`, `--from-stage`, `--debug` y `--eval`. `start_run` ahora agrega un sufijo si el `run_id` ya existe. Probado en CPU sobre una imagen externa al dataset.
 
 ### [ ] E1-18 · Submission writer — ENT
 - **Objetivo:** `scene/io/submission.py` y `scripts/make_submission.py`: 80 filas (60 de test y 20 del benchmark), columnas `image_id,SceneJSON`, mismo orden e ids que `sample_submission.csv`, cada JSON validado.
 - **Depende de:** E1-17
 - **Aceptación:** validación completa sin errores; **hito H1** al subirlo a Kaggle y obtener un puntaje.
+- **Nota (interfaz):** código listo, **falta el envío (H1)**. `build_submission(scenes, cfg) -> (rows, errors)`, `write_submission`, `read_submission` en `scene/io/submission.py`. `scripts/make_submission.py --run <run|latest> [...]` junta escenas de varios runs, valida las 80 filas y no escribe nada si alguna falla. Testeado con las 80 filas de `sample_submission.csv`. Las filas del benchmark van sin `questions` hasta E1-23.
 
-### [ ] E1-19 · Chequeo de consistencia de la representación — EVA
+### [x] E1-19 · Chequeo de consistencia de la representación — EVA
 - **Objetivo:** `eval/scene_consistency.py`: verifica que el área, el centroide, la posición y el tamaño coincidan con la máscara decodificada; que las relaciones sean coherentes (simetría left/right, ids existentes); y que la evidencia apunte a ids válidos. Además mide la exactitud de posición, tamaño y color contra GT en pares matcheados.
 - **Depende de:** E1-16, E1-07
 - **Aceptación:** reporte `metrics_scene.json`; 0 inconsistencias en el run base.
+- **Nota (interfaz):** `internal_consistency(scenes, cfg)` (sin GT: área, centroide, posición y tamaño recalculados desde el RLE con pycocotools y código propio; relaciones con ids válidos, enum, inversa presente y dirección coherente con los centroides; evidencias; fracción de máscara fuera de la caja) y `attribute_accuracy(scenes, gt, cfg, images)` (pares TP de máscaras: posición, tamaño y color contra los de la máscara GT) en `eval/scene_consistency.py`. Para emparejar, `Prediction` y `MatchEvent` ganan `pred_id`/`gt_id` (opcionales). `scripts/run_eval.py --run <run|latest>` calcula F1 de cajas y máscaras (con desglose por tamaño), consistencia y atributos, y escribe `metrics_scene.json`. Smoke test con 3 imágenes de dev: 0 inconsistencias; posición 94 %, tamaño 100 %, color 94 %.
 
 ## Preguntas
 
@@ -201,6 +210,7 @@ Las referencias a campos del SceneJSON se resuelven siempre contra `data/competi
 - **Objetivo:** `scripts/tune_thresholds.py`: split fijo de 80/40 (estratificado, con semilla), barrido de umbral (y NMS entre clases) sobre la caché de detecciones crudas, selección en tuning y reporte en holdout.
 - **Depende de:** E1-07, E1-17
 - **Aceptación:** curva F1 vs. umbral guardada y valor elegido escrito en `base.yaml`, con su justificación.
+- **Nota (interfaz):** código listo, **falta correrlo en Kaggle con la caché de las 120 imágenes de dev** y copiar el umbral elegido a `base.yaml`. `split_tuning_holdout` (estratificado por cantidad de instancias: se ordena y de cada grupo consecutivo va una imagen al holdout, con la semilla global), `sweep` y `choose` (máximo F1 en tuning; ante empate, el umbral más alto) en `eval/tuning.py`. `scripts/tune_thresholds.py` barre 0,02–0,50 con y sin NMS entre clases sobre la caché cruda (no corre modelos) y escribe `curve.csv`, `curve.png`, `split.json` y `summary.json` en `outputs/tuning/<hash>/`, con el F1 de holdout del umbral elegido y del actual.
 
 ### [ ] E1-30 · Experimento controlado de mejora — EVA
 - **Objetivo:** al menos una comparación contra la línea base cambiando una sola variable (candidatos: sinónimos en el vocabulario, detector alternativo, NMS entre clases, umbral por clase). Registro en `outputs/experiments.csv` con hipótesis, cambio, métricas de tuning y holdout, costo y conclusión. Si hace falta, implementar el detector alternativo (`detection/yolo_world.py` o `detection/gdino.py` con chunks).
