@@ -134,9 +134,9 @@ def test_desgloses_y_guardado(img, tmp_path) -> None:
     # TP horse: área 1600/10000 = 0.16 → large; FP car: 25/10000 → small.
     assert res.by_size["large"]["tp"] == 1 and res.by_size["small"]["fp"] == 1
     path = save_metrics(res, tmp_path, category_names={HORSE: "horse", CAR: "car"})
-    data = json.loads(path.read_text())
+    data = json.loads(path.read_text(encoding="utf-8"))
     assert data["summary"]["tp"] == 1 and set(data["by_size"]) == {"small", "medium", "large"}
-    csv_text = (tmp_path / "metrics_detection_per_category.csv").read_text()
+    csv_text = (tmp_path / "metrics_detection_per_category.csv").read_text(encoding="utf-8")
     assert "horse" in csv_text and "category_name" in csv_text
 
 

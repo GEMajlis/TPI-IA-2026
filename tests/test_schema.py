@@ -58,7 +58,7 @@ def scene() -> dict:
 
 
 def test_enums_coinciden_con_el_schema() -> None:
-    schema = json.loads(SCHEMA.read_text())
+    schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
     obj = schema["properties"]["objects"]["items"]["properties"]
     rel = schema["properties"]["relations"]["items"]["properties"]
     qa = schema["$defs"]["questionAnswer"]["properties"]

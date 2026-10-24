@@ -37,7 +37,9 @@ def _categories() -> list[Category]:
 
 @pytest.mark.parametrize("q", _benchmark(), ids=lambda q: q["question_id"])
 def test_adapter_coincide_con_el_dsl_escrito_a_mano(q: dict) -> None:
-    expected = Query.model_validate(json.loads(FIXTURE.read_text())[q["question_id"]])
+    expected = Query.model_validate(
+        json.loads(FIXTURE.read_text(encoding="utf-8"))[q["question_id"]]
+    )
     assert query_from_benchmark(q, PHRASES) == expected
 
 
