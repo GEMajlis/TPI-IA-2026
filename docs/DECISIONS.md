@@ -110,3 +110,14 @@ validar al menos 95 % del JSON sobre el benchmark e inspeccionar las 20 descripc
 - 120 escenas, 6905 objetos, 924 198 relaciones: **0 inconsistencias**. Atributos en pares TP (1140): posición 97 %, tamaño 95 %, color 90 % (confusiones entre tonos vecinos: negro/gris, gris/blanco, marrón/negro).
 - **Riesgo abierto:** en el 9 % de los objetos más del 10 % de la máscara cae fuera de la caja entregada (por el margen de recorte de 0,1). No viola el schema, pero no sabemos si la métrica de consistencia de Kaggle compara caja y máscara. Candidato a experimento: `box_margin: 0` o entregar como `bbox` la caja de la máscara.
 
+## 2026-10-24 · E1-30 (experimentos controlados)
+
+### D-17 · Post-proceso solo en máscaras chicas: **descartado**
+- **Hipótesis (D-15):** el post-proceso ayuda en small y perjudica en medium/large; aplicarlo solo a máscaras crudas con área relativa < 0,00333 sube el F1 de máscaras.
+- **Cambio (única variable):** `segmentation.postprocess.apply_below_area_ratio: null → 0.00333` (`configs/experiments/e1_30_pp_solo_chicas.yaml`). Línea base: run de dev con umbral 0,18.
+- **Oráculo (cajas GT, 1790 instancias), IoU ≥ 0,5:** cruda 83,5 % · post-proceso en todas 84,1 % · **solo en chicas 85,2 %** (small 74,9 %, medium 96,1 %, large 97,3 %). Con cajas perfectas la hipótesis se cumple.
+- **De punta a punta (cajas predichas), F1 de máscaras:** tuning 0,586 → 0,596 (+0,96); **holdout 0,614 → 0,609 (−0,54)**. F1 de cajas sin cambios (0,666 en holdout). Por tamaño en holdout: small −0,17, medium −0,93, large −1,32 puntos.
+- **Decisión:** no se adopta (se decide con holdout; además, ±1 punto en 40 imágenes son 2–3 instancias, indistinguible del ruido).
+- **Lectura:** las cajas de OWLv2 son más flojas que las GT; SAM2 se derrama fuera del objeto y el recorte a la caja del post-proceso es lo que lo corrige en medium/large. Con cajas GT ese recorte no hace falta, por eso el oráculo lo ve como perjuicio. Con el experimento sube la fracción de máscaras con > 10 % fuera de la caja (5,6 % → 6,0 %). **Una mejora medida con el oráculo no garantiza una mejora end-to-end: el error de detección se propaga a la segmentación.**
+- Registro: `outputs/experiments.csv` en el run de Kaggle (`exp_run` 20261024-193053-56d96386).
+

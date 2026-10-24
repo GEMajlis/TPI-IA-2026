@@ -43,6 +43,7 @@ ruff check . && ruff format --check .
 | E1-29 Ajuste de umbral (0,18) | Barrido de umbral y NMS entre clases en tuning (80) / holdout (40) | `src/eval/tuning.py`, `scripts/tune_thresholds.py` |
 | E1-20 DSL | Modelos pydantic de la consulta y del resultado; fixture con el DSL de las 60 consignas del benchmark | `src/scene/qa/dsl.py` |
 | E1-21 Category matcher | Texto en inglés o español → categoría: nombre, plurales, léxico español, sinónimos LVIS y LaBSE como último recurso (D-13) | `src/scene/qa/category_matcher.py`, `configs/lexicon_es.yaml` |
+| E1-30 Experimentos | Umbral 0,18 adoptado (+4,7 F1 holdout); post-proceso solo en chicas descartado (D-17) | `configs/experiments/`, `scripts/compare_runs.py` |
 | E1-10 Post-proceso | Umbral, NMS por clase, NMS entre clases (apagado) y tope, con conteos en la traza | `src/scene/detection/postprocess.py` |
 
 **Resultados en Kaggle (120 imágenes de dev):**
