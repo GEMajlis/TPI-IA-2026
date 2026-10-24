@@ -38,6 +38,7 @@ ruff check . && ruff format --check .
 | E1-16 Builder | SceneJSON validado con origen observado/derivado/desconocido por campo | `src/scene/scene/builder.py` |
 | E1-17 Orquestador (falta Kaggle) | Pipeline completa con caché por etapa y traza; acepta imágenes sueltas | `src/scene/pipeline.py`, `scripts/run_pipeline.py` |
 | E1-18 Submission (falta envío) | 80 filas en el orden del sample, todas validadas | `src/scene/io/submission.py`, `scripts/make_submission.py` |
+| E1-19 Consistencia | Chequeo del SceneJSON contra su máscara y exactitud de posición/tamaño/color contra GT | `src/eval/scene_consistency.py`, `scripts/run_eval.py` |
 | E1-10 Post-proceso | Umbral, NMS por clase, NMS entre clases (apagado) y tope, con conteos en la traza | `src/scene/detection/postprocess.py` |
 
 **Línea base de detección en Kaggle (120 imágenes de dev, umbral 0,1 sin ajustar):** P = 0,52, R = 0,71, **F1 de cajas = 0,60**, cobertura evaluable 35 %. Ya supera el 0,50 de promoción. El punto débil es la precisión (~57 predicciones por imagen contra ~15 de GT): el ajuste de umbral (E1-29) debería mejorarla. **Línea base de segmentación en Kaggle (SAM2.1 hiera-large sobre esas cajas):** P = 0,47, R = 0,64, **F1 de máscaras = 0,54**. Se pierden 124 de los 1264 TP de cajas (~10 %) porque la máscara no llega a IoU 0,5: E1-12 (oráculo con cajas GT) dirá si es error de SAM2 o del post-proceso.
@@ -93,4 +94,7 @@ En paralelo, porque no dependen de los modelos (se trabajan con SceneJSON sinté
   - **D-06:** umbrales de tamaño;
   - **D-09:** sin NMS entre clases en la línea base;
   - **D-10:** qué responder cuando una pregunta en singular encuentra varias instancias.
-- [ ] **Repartir las tareas** según las líneas de [TASKS.md](TASKS.md): PER, ESC, QA y LLM se pueden llevar en paralelo. Todo se trabaja en la rama `desarrollo`, con un commit por tarea.
+- [x] **Repartir las tareas** (todo en la rama `desarrollo`, un commit por tarea, `git pull` antes de empezar y antes de cada push; cada uno toca su carpeta):
+  - **QA:** E1-20, E1-21, E1-22 y E1-23 (`src/scene/qa/`).
+  - **LLM:** E1-25, E1-26 y E1-27 (`src/scene/llm/`).
+  - **Evaluación:** E1-12, E1-19 y E1-29 (`src/eval/`, `scripts/`). Después: E1-24, E1-28, E1-30 y E1-31.

@@ -138,10 +138,11 @@ Las referencias a campos del SceneJSON se resuelven siempre contra `data/competi
 - **Aceptación:** validación completa sin errores; **hito H1** al subirlo a Kaggle y obtener un puntaje.
 - **Nota (interfaz):** código listo, **falta el envío (H1)**. `build_submission(scenes, cfg) -> (rows, errors)`, `write_submission`, `read_submission` en `scene/io/submission.py`. `scripts/make_submission.py --run <run|latest> [...]` junta escenas de varios runs, valida las 80 filas y no escribe nada si alguna falla. Testeado con las 80 filas de `sample_submission.csv`. Las filas del benchmark van sin `questions` hasta E1-23.
 
-### [ ] E1-19 · Chequeo de consistencia de la representación — EVA
+### [x] E1-19 · Chequeo de consistencia de la representación — EVA
 - **Objetivo:** `eval/scene_consistency.py`: verifica que el área, el centroide, la posición y el tamaño coincidan con la máscara decodificada; que las relaciones sean coherentes (simetría left/right, ids existentes); y que la evidencia apunte a ids válidos. Además mide la exactitud de posición, tamaño y color contra GT en pares matcheados.
 - **Depende de:** E1-16, E1-07
 - **Aceptación:** reporte `metrics_scene.json`; 0 inconsistencias en el run base.
+- **Nota (interfaz):** `internal_consistency(scenes, cfg)` (sin GT: área, centroide, posición y tamaño recalculados desde el RLE con pycocotools y código propio; relaciones con ids válidos, enum, inversa presente y dirección coherente con los centroides; evidencias; fracción de máscara fuera de la caja) y `attribute_accuracy(scenes, gt, cfg, images)` (pares TP de máscaras: posición, tamaño y color contra los de la máscara GT) en `eval/scene_consistency.py`. Para emparejar, `Prediction` y `MatchEvent` ganan `pred_id`/`gt_id` (opcionales). `scripts/run_eval.py --run <run|latest>` calcula F1 de cajas y máscaras (con desglose por tamaño), consistencia y atributos, y escribe `metrics_scene.json`. Smoke test con 3 imágenes de dev: 0 inconsistencias; posición 94 %, tamaño 100 %, color 94 %.
 
 ## Preguntas
 

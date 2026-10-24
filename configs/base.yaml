@@ -101,6 +101,7 @@ scene:
 eval:
   annotations: development/annotations.json
   iou_thr: 0.5
+  centroid_decimals: 2     # tolerancia del chequeo de centroides (el builder redondea a 2)
   # Bins de frecuencia por cantidad de imágenes donde la categoría es positiva (EDA: 3 a 11).
   frequency_bins:
     rare_max: 4
