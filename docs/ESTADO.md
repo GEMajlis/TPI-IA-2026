@@ -51,6 +51,7 @@ ruff check . && ruff format --check .
 |---|---|---|---|
 | Línea base (umbral 0,1) | 0,599 | 0,543 | P 0,52 · R 0,71; ~57 predicciones por imagen |
 | **Umbral 0,18 (E1-29), holdout de 40 imágenes** | **0,666** | (falta medir) | P 0,72 · R 0,62; ~28 predicciones por imagen |
+| **Umbral 0,18, dev completo (120)** | **0,653** | **0,596** | P 0,70 · R 0,61; +5,4 y +5,2 puntos sobre la línea base |
 
 - **Por tamaño (línea base):** F1 de máscaras small 0,42 · medium 0,64 · large 0,76. Los objetos chicos son el cuello de botella.
 - **Oráculo (SAM2 con cajas GT):** el 84 % de las instancias llega a IoU ≥ 0,5, pero solo el 72–75 % de las chicas. El post-proceso ayuda en small y perjudica en medium/large → experimento para E1-30 (D-15).
@@ -82,7 +83,7 @@ La idea es armar primero un **corte vertical mínimo** y probarlo en Kaggle con 
 1. ~~**E1-09 y E1-10 · Detector OWLv2 y post-proceso.**~~ Hecho.
 2. ~~**Primera corrida en Kaggle.**~~ Hecho: F1 de cajas 0,60.
 3. ~~**SAM2 en Kaggle y E1-13 · propiedades básicas.**~~ Hecho: F1 de máscaras 0,54.
-4. **Primer envío (hito H1):** en Kaggle, `python scripts/run_pipeline.py --config configs/base.yaml configs/kaggle.yaml --split test benchmark` y después `python scripts/make_submission.py --config configs/base.yaml configs/kaggle.yaml --run latest --out /kaggle/working/submission.csv`. El código de E1-16, E1-17 y E1-18 ya está.
+4. **Primer envío (hito H1):** `submission.csv` generado en Kaggle con umbral 0,18 (80 filas válidas, 2271 objetos, 164 796 relaciones, 15,3 MB). Falta subirlo y anotar el puntaje.
 
 En paralelo, porque no dependen de los modelos (se trabajan con SceneJSON sintéticos):
 - ~~**E1-20 y E1-21:** DSL y category matcher.~~ Hecho. Sigue **E1-22**, el ejecutor determinista.
