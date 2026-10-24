@@ -6,11 +6,10 @@ Resumen para el grupo: qué está hecho, qué resultados tenemos y qué falta. E
 
 ## Dónde estamos
 
-**Etapa 1 (promoción): 32 de 35 tareas.** La pipeline completa corre en Kaggle de punta a punta (detección → SAM2 → SceneJSON → preguntas en modo determinista y con LLM). El `submission.csv` fue aceptado con `PipelineScore = 0.6509` (**H1 cumplido**). Falta armar la **entrega** (notebook, reporte y checklist).
+**Etapa 1 (promoción): 33 de 35 tareas.** La pipeline completa y la notebook final corren en Kaggle de punta a punta (detección → SAM2 → SceneJSON → preguntas en modo determinista y con LLM). El `submission.csv` fue aceptado con `PipelineScore = 0.6509` (**H1 cumplido**). Faltan el reporte y el checklist final.
 
 | Pendiente | Qué falta | Quién |
 |---|---|---|
-| **E1-32 · Notebook de Kaggle** | Generada `TPI_IA_2026P_15.ipynb`; falta `Run All` en T4 y guardar las salidas ([guía](KAGGLE_RUNBOOK.md)) | Grupo 15 |
 | **E1-33 · Reporte técnico** | `report/REPORTE.md` (portada, dataset, metodología, resultados, discusión y errores, conclusiones); cada número sale del run final | a repartir |
 | **E1-34 · Checklist final** | Condiciones de validez y checklist de promoción, punto por punto | a repartir |
 
@@ -107,7 +106,8 @@ ruff check . && ruff format --check .
 - [x] **Definir el número de grupo:** Grupo 15, curso 5K1; notebook `TPI_IA_2026P_15`.
 - [x] **Resolver la portabilidad de la notebook:** es autocontenida y escribe el código con
   `%%writefile`; no depende de que el repositorio sea público.
-- [ ] **Repartir E1-32, E1-33 y E1-34.**
+- [x] **Ejecutar y guardar E1-32 en Kaggle.**
+- [ ] **Cerrar E1-33 y E1-34.**
 - [ ] **Pasar `desarrollo` a `main`** con un PR antes de entregar.
 - [ ] **Preparar la defensa:** 10 minutos; todos tienen que poder explicar cualquier parte.
 

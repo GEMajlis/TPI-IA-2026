@@ -246,13 +246,14 @@ Las referencias a campos del SceneJSON se resuelven siempre contra `data/competi
 - **Aceptación:** sección de notebook y `docs/error_analysis.md` con conclusiones que motivan la extensión de la Etapa 2.
 - **Nota:** percepción corrida en Kaggle sobre dev y conclusiones en `docs/error_analysis.md` (55,5 % de las instancias llega a TP de máscara; se pierden sobre todo en detección: 11,6 % sin caja, 8,4 % con otra clase, 16,6 % bajo el umbral; small 40 % vs ~72 % medium/large → motiva tiling tipo SAHI para la Etapa 2). La atribución de QA la da E1-24: en los dos modos los 11 errores sobre 40 cerradas son de percepción (6 de conteo, 1 existencia alucinada, 4 objetos no detectados). Falta solo la sección de notebook (E1-32). `eval/error_analysis.py`: `funnel_rows`/`funnel_summary` (primera etapa en la que se pierde cada instancia GT: `no_box` → `wrong_class` → `below_threshold` → `nms` → `max_detections` → `box_match` → `mask` → `ok`; las etapas de detección se recalculan desde la caché cruda con el mismo post-proceso y piden cobertura IoU ≥ 0,5, las dos últimas usan el matching federado), `fp_types` (duplicado, localización, confusión de clase, categoría negativa, fondo), `per_image_scores`, `pick_gallery` (correctas, ambiguas y fallidas, sin superposición), `draw_case` (GT verde, FN amarillo, TP azul, FP rojo, ignoradas gris) y `worst_classes`. `scripts/analyze_errors.py --run <run>` usa la config de inferencia del run y escribe `error_analysis/` (summary.json, funnel.csv, fp_types.csv, per_image.csv, worst_classes.csv, gallery/).
 
-### [ ] E1-32 · Generador de notebook y corrida en Kaggle — ENT
+### [x] E1-32 · Generador de notebook y corrida en Kaggle — ENT
 - **Objetivo:** `scripts/build_notebook.py` genera `TPI_IA_2026P_<grupo>.ipynb`: instalación, `%%writefile` de los módulos y secciones en Markdown (EDA, metodología, resultados, experimentos, análisis, submission). Separa claramente GT, predicciones y datos derivados.
 - **Depende de:** E1-31
 - **Aceptación:** corre de punta a punta en Kaggle con GPU y sin archivos externos; queda guardada con todas sus salidas; genera `submission.csv` y los CSV y JSON de métricas.
-- **En desarrollo (2026-10-24):** generador, configuración del Grupo 15, notebook autocontenida,
-  validación nbformat y guía de ejecución implementados. Falta ejecutar `Run All` en Kaggle,
-  guardar la versión con salidas y descargar `grupo15_entrega_artifacts.zip`.
+- **Cierre (2026-10-24):** `TPI_IA_2026P_15.ipynb` se ejecutó completa en Kaggle sobre una
+  Tesla T4. La corrida de desarrollo `20261024-223716-6f583413` procesó 120 imágenes y la de
+  entrega `20261024-225121-6f583413` generó las 80 filas. La última celda validó la entrega y
+  produjo `grupo15_entrega_artifacts.zip` con métricas, trazas, manifiestos, análisis y submission.
 
 ### [ ] E1-33 · Reporte técnico — ENT
 - **Objetivo:** `report/REPORTE.md` con la estructura sugerida (portada, dataset, metodología, resultados, discusión y errores, conclusiones). Las tablas se generan desde los CSV del run final para garantizar correspondencia con la notebook. Declara modelos, recursos y código reutilizado.

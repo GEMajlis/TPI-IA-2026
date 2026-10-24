@@ -3,7 +3,13 @@ import json
 
 import nbformat
 
-from scripts.build_notebook import ROOT, build_notebook, load_delivery, runtime_files
+from scripts.build_notebook import (
+    ROOT,
+    build_notebook,
+    load_delivery,
+    runtime_files,
+    writefile_cell,
+)
 
 
 def test_delivery_tiene_datos_del_grupo() -> None:
@@ -28,20 +34,56 @@ def test_notebook_es_autocontenida_y_separa_gt() -> None:
     assert 'run_pipeline("--split", "test", "benchmark")' in sources
     assert "scripts/run_qa_llm.py" in sources
     assert "scripts/analyze_errors.py" in sources
+    assert "sys.path.insert(0, SRC_ROOT)" in sources
     assert "PipelineScore = 0.6509" in sources
     assert "grupo15_entrega_artifacts.zip" in sources
 
     write_cells = [cell for cell in notebook["cells"] if "source" in cell["metadata"]["tags"]]
-    written = {cell["source"].splitlines()[0].removeprefix("%%writefile ") for cell in write_cells}
+    written = {cell["metadata"]["source_path"] for cell in write_cells}
     expected = {path.relative_to(ROOT).as_posix() for path in runtime_files(ROOT)}
     assert written == expected
     for cell in write_cells:
-        first = cell["source"].splitlines()[0]
-        if first.startswith("%%writefile src/scene/"):
+        if cell["source"].startswith("%%writefile"):
+            assert cell["source"].partition("\n")[2].strip()
+        source_path = cell["metadata"]["source_path"]
+        if source_path.startswith("src/scene/"):
             assert "inference" in cell["metadata"]["tags"]
             assert "ground-truth" not in cell["metadata"]["tags"]
-        if first.startswith(("%%writefile src/eval/", "%%writefile src/eda/")):
+        if source_path.startswith(("src/eval/", "src/eda/")):
             assert "ground-truth" in cell["metadata"]["tags"]
+
+
+def test_archivos_vacios_no_usan_writefile_magic() -> None:
+    cfg = load_delivery(ROOT / "configs" / "delivery.yaml")
+    notebook = build_notebook(ROOT, cfg)
+    empty_paths = {
+        path.relative_to(ROOT).as_posix()
+        for path in runtime_files(ROOT)
+        if path.stat().st_size == 0
+    }
+    empty_cells = [
+        cell for cell in notebook["cells"] if cell["metadata"].get("source_path") in empty_paths
+    ]
+
+    assert {cell["metadata"]["source_path"] for cell in empty_cells} == empty_paths
+    assert all(not cell["source"].startswith("%%writefile") for cell in empty_cells)
+    assert all(".write_text('', encoding='utf-8')" in cell["source"] for cell in empty_cells)
+
+
+def test_archivo_con_solo_espacios_no_usa_writefile_magic(monkeypatch) -> None:
+    source = ROOT / "src" / "eda" / "__init__.py"
+    monkeypatch.setattr(type(source), "read_text", lambda *_args, **_kwargs: "\n")
+
+    cell = writefile_cell(source, ROOT)
+
+    assert not cell["source"].startswith("%%writefile")
+    assert ".write_text('\\n', encoding='utf-8')" in cell["source"]
+
+
+def test_runtime_no_incluye_metadatos_de_instalacion() -> None:
+    paths = runtime_files(ROOT)
+
+    assert all(not any(part.endswith(".egg-info") for part in path.parts) for path in paths)
 
 
 def test_notebook_generada_es_valida_y_sin_salidas() -> None:

@@ -93,7 +93,12 @@ def runtime_files(root: Path = ROOT) -> list[Path]:
         root / "configs" / "delivery.yaml",
     }
     paths.update((root / "configs" / "experiments").glob("*.yaml"))
-    paths.update(path for path in (root / "src").rglob("*") if path.suffix in {".py", ".txt"})
+    paths.update(
+        path
+        for path in (root / "src").rglob("*")
+        if path.suffix in {".py", ".txt"}
+        and not any(part.endswith(".egg-info") for part in path.relative_to(root).parts)
+    )
     paths.update(root / "scripts" / name for name in RUNTIME_SCRIPTS)
     missing = sorted(path for path in paths if not path.is_file())
     if missing:
@@ -136,13 +141,24 @@ def _source_tag(relative: Path) -> str:
 
 
 def writefile_cell(path: Path, root: Path = ROOT) -> dict[str, Any]:
-    """Crea una celda que reconstruye exactamente un archivo del proyecto."""
+    """Crea una celda que reconstruye un archivo del proyecto."""
     relative = path.relative_to(root)
+    relative_posix = relative.as_posix()
     content = path.read_text(encoding="utf-8")
-    return code(
-        f"%%writefile {relative.as_posix()}\n{content}",
-        tags=["source", _source_tag(relative)],
-    )
+    if content.strip():
+        cell = code(
+            f"%%writefile {relative_posix}\n{content}",
+            tags=["source", _source_tag(relative)],
+        )
+    else:
+        # IPython rechaza `%%writefile` cuando el cuerpo está vacío o sólo tiene espacios.
+        cell = code(
+            "from pathlib import Path\n\n"
+            f"_ = Path({relative_posix!r}).write_text({content!r}, encoding='utf-8')",
+            tags=["source", _source_tag(relative)],
+        )
+    cell["metadata"]["source_path"] = relative_posix
+    return cell
 
 
 def _cover(cfg: DeliveryConfig) -> str:
@@ -220,10 +236,14 @@ respuesta o SceneJSON usa GT. Las semillas, versiones, hardware y modelos quedan
             """
 from pathlib import Path
 import os
+import sys
 
 PROJECT_ROOT = Path("/kaggle/working/tpi-ia-2026")
 PROJECT_ROOT.mkdir(parents=True, exist_ok=True)
 os.chdir(PROJECT_ROOT)
+SRC_ROOT = str(PROJECT_ROOT / "src")
+if SRC_ROOT not in sys.path:
+    sys.path.insert(0, SRC_ROOT)
 print("Directorio de trabajo:", Path.cwd())
 """,
             tags=["bootstrap"],
