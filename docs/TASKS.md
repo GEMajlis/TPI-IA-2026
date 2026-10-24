@@ -171,13 +171,14 @@ Las referencias a campos del SceneJSON se resuelven siempre contra `data/competi
 - **Aceptación:** las 60 consignas del benchmark (20 de descripción + 40 estructuradas, ver `docs/DECISIONS.md`) producen una respuesta o un estado explícito; el submission valida; **hito H2** si además F1 ≥ 0,40.
 - **Nota (código listo, falta correr sobre el run real en Kaggle):** `query_from_benchmark(q, phrases)` usa `type` y `class_en`; el predicado se busca en el texto con `qa.adapter.relation_phrases` (gana la frase más larga). El test compara las 60 traducciones contra el fixture escrito a mano de E1-20. `answer_questions(...)` arma los items (con `interpreted_query` y `status`). `scripts/run_qa.py --run <run|latest>` agrega `questions` a `scenes/<image_id>.json` del run, valida cada escena, traza la etapa `qa_deterministic` y guarda `qa_deterministic.csv`; después se corre `make_submission.py`. Probado con un run armado a partir de las 80 filas de `sample_submission.csv`: las 60 consignas responden y el submission valida.
 
-### [ ] E1-24 · Evaluación de QA — EVA
+### [x] E1-24 · Evaluación de QA — EVA
 - **Objetivo:** `eval/qa_eval.py`:
   - **Fidelidad:** recomputa cada respuesta desde el SceneJSON predicho y verifica que la evidencia sostenga la respuesta.
   - **Exactitud contra GT:** construye un SceneJSON desde GT (`eval/oracle.py`, solo en eval) y corre el mismo ejecutor.
   - Exactitud por tipo y por modo, y tasa de unsupported.
 - **Depende de:** E1-23, E1-07
 - **Aceptación:** tabla con exactitud sobre el JSON predicho y sobre el JSON oráculo por tipo de pregunta, que permite atribuir cada error a percepción o a razonamiento.
+- **Nota (interfaz):** `eval/oracle.py::oracle_scene(img_gt, image, cfg, names)` arma el SceneJSON desde el GT con el mismo builder (confianza 1). `eval/qa_eval.py`: `evidence_supports` (la evidencia sostiene la respuesta: conteo = largo de la evidencia, existencia ⇔ evidencia no vacía, posición/tamaño del objeto de evidencia, tripla de relación presente o ausente), `reexecutes` (volver a ejecutar el `interpreted_query` da lo mismo), `evaluate_mode(mode, ...)` (referencia = mismo ejecutor con la consulta estructurada sobre el oráculo; atribución `perception` / `interpretation` (DSL del LLM ≠ estructurado) / `oracle_not_ok`) y `summarize`. `scripts/eval_qa.py --run <run>` escribe `metrics_qa.json` y `qa_eval.csv`. **Ojo:** la referencia usa nuestras reglas de posición, tamaño y relaciones, no las respuestas de la cátedra (el benchmark no las trae). Run local sobre las 20 imágenes del benchmark (OWLv2 + SAM2 tiny), modo determinista: **72,5 %** de coincidencia con el oráculo en las 40 cerradas (count 40 %, existence 90 %, position 100 %, relation 80 %, size 60 %), evidencia y re-ejecución 100 %, los 11 errores son de percepción.
 
 ## LLM
 
@@ -207,6 +208,7 @@ Las referencias a campos del SceneJSON se resuelven siempre contra `data/competi
 - **Objetivo:** genera `questions_llm` (con `interpreted_query`) y las descripciones para las 20 imágenes del benchmark mediante intérprete → mismo ejecutor → verbalización, e integra el resultado en el submission.
 - **Depende de:** E1-26, E1-27, E1-23
 - **Aceptación:** el submission valida con `questions_llm` completo; E1-24 se extiende al modo LLM.
+- **Nota (interfaz):** código listo, **falta la corrida con Qwen 3B en la T4**. `scene/qa/llm_mode.py::answer_questions_llm(questions, scene, interpreter, executor, describer, names)`: el intérprete (E1-26) recibe solo `question`; su DSL lo ejecuta el mismo `Executor` de E1-22; si el intérprete falla o marca la pregunta como no soportada, se ejecuta `Query(op="unsupported", reason=...)`, así `interpreted_query` siempre es un DSL válido. `op="describe"` → `SceneDescriber` (E1-27); si la descripción no es fiel tras el reintento se usa la plantilla determinista (`status_detail` lo indica). Cada item lleva `interpreter` (estado, intentos, errores, salida cruda y estado del descriptor). `scripts/run_qa_llm.py --run <run>` agrega `questions_llm` a las escenas del benchmark (etapa `qa_llm` en la traza, `qa_llm.csv`); `eval_qa.py` evalúa los dos modos (validez del JSON, coincidencia del DSL con el estructurado y exactitud).
 
 ## Experimentación, análisis y entrega
 
