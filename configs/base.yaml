@@ -6,6 +6,9 @@ paths:
   # Raíz de la fuente de datos (misma estructura que el mount de Kaggle).
   data_root: data/dataset
   outputs: outputs/runs
+  # Caché por etapa compartida entre runs (detecciones crudas y máscaras), por hash de config.
+  cache: outputs/cache
+  submission: submission.csv   # nombre del archivo dentro del run
   dev_images: development/images
   test_images: tpi_ia_2026_competition_public/test_images
   test_index: tpi_ia_2026_competition_public/test_images.csv

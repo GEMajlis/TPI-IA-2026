@@ -120,20 +120,23 @@ Las referencias a campos del SceneJSON se resuelven siempre contra `data/competi
 - **Aceptación:** tests sintéticos por relación, incluidos casos límite (centroides alineados → sin relación horizontal).
 - **Nota (interfaz):** `compute_relations(objs: list[RelObject], width, height, cfg["scene"]["relations"]) -> RelationsResult(relations, extra_relations, stats)`. `RelObject(id, centroid, box, mask, confidence)` usa la caja de la máscara (`mask_bbox`). `relations` solo con el enum del schema (direccionales por centroide con margen, en los dos sentidos; `overlaps` simétrica por IoU de máscaras); `near` y `on_top_of` van en `extra_relations` (D-04). Operaciones con máscaras solo en pares cuyas cajas se tocan. El tope `max_relations` prioriza pares de mayor confianza y nunca deja una relación sin su inversa. En una imagen real con 50 objetos: 4370 relaciones en 0,07 s. **Ojo (E1-18):** con ~100 objetos son ~17 000 relaciones (~1 MB de JSON por escena); si el submission queda muy pesado, bajar `max_relations` o limitar los objetos que entran a relaciones.
 
-### [ ] E1-16 · Builder del SceneJSON — ESC
+### [x] E1-16 · Builder del SceneJSON — ESC
 - **Objetivo:** `scene/scene/builder.py`: arma el SceneJSON (imagen, objetos con ids únicos, clase, confianza, bbox, RLE, propiedades, atributos, relaciones y origen observado/derivado/desconocido) y lo valida con E1-03.
 - **Depende de:** E1-11, E1-13, E1-14, E1-15
 - **Aceptación:** el JSON valida contra el schema; imagen sin detecciones → JSON válido con lista vacía.
+- **Nota (interfaz):** `build_scene(image_id, image, segmented, cfg) -> (scene, stats)` en `scene/scene/builder.py`; valida con `assert_valid_scene`. Ids `obj_<n>` ordenados por confianza. `bbox` = caja del detector (observada); además `category_name`, `area_px`, `mask_bbox`, `mask_score`, `attributes` (color, confianza y RGB), `provenance` (observed/derived/unknown por campo), `source` y `extra_relations`. Si la máscara queda vacía se guarda la caja rasterizada (`source.mask = "box_fallback"`). Peso: una escena de 74 objetos ocupa ~750 KB, >80 % en `relations`.
 
 ### [ ] E1-17 · Orquestador end-to-end — INF
 - **Objetivo:** `scene/pipeline.py` y `scripts/run_pipeline.py`: recorre imágenes, corre las etapas con caché, traza y guarda el SceneJSON por imagen. Flags `--split`, `--limit` y `--from-stage`.
 - **Depende de:** E1-16, E1-05
 - **Aceptación:** corrida completa de dev en Kaggle con GPU; una segunda corrida que solo cambia el umbral reutiliza la caché de detecciones crudas.
+- **Nota (interfaz):** código listo, **falta la corrida completa en Kaggle**. `Pipeline(cfg, ctx, tracer, vocab, make_detector, make_segmenter, from_stage, debug).run(images)` en `scene/pipeline.py`; los modelos se cargan solo si hay algo que no está en caché. Caché compartida entre runs en `paths.cache`, con clave = hash de la config de la etapa y las anteriores (`stage_keys`): cambiar el umbral reutiliza las detecciones crudas; cambiar relaciones o color reutiliza también las máscaras (testeado con modelos falsos). Traza con `status=cached`. `scripts/run_pipeline.py` admite `--split` con varios splits, `--images`, `--limit`, `--from-stage`, `--debug` y `--eval`. `start_run` ahora agrega un sufijo si el `run_id` ya existe. Probado en CPU sobre una imagen externa al dataset.
 
 ### [ ] E1-18 · Submission writer — ENT
 - **Objetivo:** `scene/io/submission.py` y `scripts/make_submission.py`: 80 filas (60 de test y 20 del benchmark), columnas `image_id,SceneJSON`, mismo orden e ids que `sample_submission.csv`, cada JSON validado.
 - **Depende de:** E1-17
 - **Aceptación:** validación completa sin errores; **hito H1** al subirlo a Kaggle y obtener un puntaje.
+- **Nota (interfaz):** código listo, **falta el envío (H1)**. `build_submission(scenes, cfg) -> (rows, errors)`, `write_submission`, `read_submission` en `scene/io/submission.py`. `scripts/make_submission.py --run <run|latest> [...]` junta escenas de varios runs, valida las 80 filas y no escribe nada si alguna falla. Testeado con las 80 filas de `sample_submission.csv`. Las filas del benchmark van sin `questions` hasta E1-23.
 
 ### [ ] E1-19 · Chequeo de consistencia de la representación — EVA
 - **Objetivo:** `eval/scene_consistency.py`: verifica que el área, el centroide, la posición y el tamaño coincidan con la máscara decodificada; que las relaciones sean coherentes (simetría left/right, ids existentes); y que la evidencia apunte a ids válidos. Además mide la exactitud de posición, tamaño y color contra GT en pares matcheados.

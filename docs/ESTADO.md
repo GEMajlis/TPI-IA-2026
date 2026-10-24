@@ -17,7 +17,7 @@ ruff check . && ruff format --check .
 
 **Regla de oro (motivo de desaprobación):** el GT solo se lee desde `src/eval/` y `src/eda/`. Nada en `src/scene/` puede importarlos ni tocar anotaciones. Lo verifica `tests/test_import_boundary.py`; no lo desactiven. Las demás reglas de trabajo están en [CLAUDE.md](../CLAUDE.md).
 
-## Qué hicimos (Etapa 1: 15 de 35 tareas)
+## Qué hicimos (Etapa 1: 16 de 35 tareas, y E1-17/E1-18 con el código listo)
 
 | Tarea | Qué quedó | Dónde |
 |---|---|---|
@@ -35,6 +35,9 @@ ruff check . && ruff format --check .
 | E1-13 Propiedades | Área, área relativa, centroide, posición 3×3, tamaño y caja de la máscara; caja rasterizada si la máscara queda vacía | `src/scene/scene/properties.py` |
 | E1-14 Color | Color dominante por k-means en Lab, paleta de 11 colores, `null` si la máscara es muy chica | `src/scene/scene/color.py` |
 | E1-15 Relaciones | `left_of`, `right_of`, `above`, `below`, `overlaps` (schema) y `near`, `on_top_of` (campo aparte), con tope priorizado | `src/scene/scene/relations.py` |
+| E1-16 Builder | SceneJSON validado con origen observado/derivado/desconocido por campo | `src/scene/scene/builder.py` |
+| E1-17 Orquestador (falta Kaggle) | Pipeline completa con caché por etapa y traza; acepta imágenes sueltas | `src/scene/pipeline.py`, `scripts/run_pipeline.py` |
+| E1-18 Submission (falta envío) | 80 filas en el orden del sample, todas validadas | `src/scene/io/submission.py`, `scripts/make_submission.py` |
 | E1-10 Post-proceso | Umbral, NMS por clase, NMS entre clases (apagado) y tope, con conteos en la traza | `src/scene/detection/postprocess.py` |
 
 **Línea base de detección en Kaggle (120 imágenes de dev, umbral 0,1 sin ajustar):** P = 0,52, R = 0,71, **F1 de cajas = 0,60**, cobertura evaluable 35 %. Ya supera el 0,50 de promoción. El punto débil es la precisión (~57 predicciones por imagen contra ~15 de GT): el ajuste de umbral (E1-29) debería mejorarla. **Línea base de segmentación en Kaggle (SAM2.1 hiera-large sobre esas cajas):** P = 0,47, R = 0,64, **F1 de máscaras = 0,54**. Se pierden 124 de los 1264 TP de cajas (~10 %) porque la máscara no llega a IoU 0,5: E1-12 (oráculo con cajas GT) dirá si es error de SAM2 o del post-proceso.
@@ -58,7 +61,7 @@ La idea es armar primero un **corte vertical mínimo** y probarlo en Kaggle con 
 1. ~~**E1-09 y E1-10 · Detector OWLv2 y post-proceso.**~~ Hecho.
 2. ~~**Primera corrida en Kaggle.**~~ Hecho: F1 de cajas 0,60.
 3. ~~**SAM2 en Kaggle y E1-13 · propiedades básicas.**~~ Hecho: F1 de máscaras 0,54.
-4. **E1-16, E1-17 y E1-18 en versión mínima:** builder, orquestador y submission, para subir a Kaggle y obtener el primer puntaje (**hito H1**).
+4. **Primer envío (hito H1):** en Kaggle, `python scripts/run_pipeline.py --config configs/base.yaml configs/kaggle.yaml --split test benchmark` y después `python scripts/make_submission.py --config configs/base.yaml configs/kaggle.yaml --run latest --out /kaggle/working/submission.csv`. El código de E1-16, E1-17 y E1-18 ya está.
 
 En paralelo, porque no dependen de los modelos (se trabajan con SceneJSON sintéticos):
 - **E1-20, E1-21 y E1-22:** DSL, category matcher y ejecutor determinista. El matcher tiene que entender nombres en español.
