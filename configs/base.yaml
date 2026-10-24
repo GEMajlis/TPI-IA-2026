@@ -43,7 +43,7 @@ detection:
     raw_topk: 300           # tope de detecciones crudas por imagen (caché)
     labels_per_box: 1       # queries que se conservan por caja (EDA H6: hay objetos con 2 clases)
     query_batch_size: null  # null = todas las queries en una pasada
-  score_threshold: 0.18     # E1-29: máx. F1 en tuning (80 img); holdout F1 0,666 vs 0,619 con 0,1 (D-12)
+  score_threshold: 0.18     # E1-29: máx. F1 en tuning (80 img); holdout F1 0,666 vs 0,619 con 0,1 (D-14)
   per_class_threshold: {}   # nombre de categoría → umbral (solo experimentos)
   nms_iou: 0.5              # NMS por clase (EDA H6: solo 1,7 % de duplicados reales con IoU ≥ 0,5)
   cross_class_nms:

@@ -53,8 +53,8 @@ ruff check . && ruff format --check .
 | **Umbral 0,18 (E1-29), holdout de 40 imágenes** | **0,666** | (falta medir) | P 0,72 · R 0,62; ~28 predicciones por imagen |
 
 - **Por tamaño (línea base):** F1 de máscaras small 0,42 · medium 0,64 · large 0,76. Los objetos chicos son el cuello de botella.
-- **Oráculo (SAM2 con cajas GT):** el 84 % de las instancias llega a IoU ≥ 0,5, pero solo el 72–75 % de las chicas. El post-proceso ayuda en small y perjudica en medium/large → experimento para E1-30 (D-13).
-- **Consistencia (E1-19):** 0 inconsistencias en 6905 objetos; posición 97 %, tamaño 95 %, color 90 % contra GT (D-14).
+- **Oráculo (SAM2 con cajas GT):** el 84 % de las instancias llega a IoU ≥ 0,5, pero solo el 72–75 % de las chicas. El post-proceso ayuda en small y perjudica en medium/large → experimento para E1-30 (D-15).
+- **Consistencia (E1-19):** 0 inconsistencias en 6905 objetos; posición 97 %, tamaño 95 %, color 90 % contra GT (D-16).
 
 ## En desarrollo
 
