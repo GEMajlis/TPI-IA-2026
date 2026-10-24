@@ -6,11 +6,7 @@ Resumen para el grupo: qué está hecho, qué resultados tenemos y qué falta. E
 
 ## Dónde estamos
 
-**Etapa 1 (promoción): 34 de 35 tareas.** La pipeline completa y la notebook final corren en Kaggle de punta a punta (detección → SAM2 → SceneJSON → preguntas en modo determinista y con LLM). El `submission.csv` fue aceptado con `PipelineScore = 0.6509` (**H1 cumplido**) y el reporte se genera desde los artefactos finales. Falta el checklist final.
-
-| Pendiente | Qué falta | Quién |
-|---|---|---|
-| **E1-34 · Checklist final** | Condiciones de validez y checklist de promoción, punto por punto | a repartir |
+**Etapa 1 (promoción): 35 de 35 tareas.** La pipeline, la notebook, el reporte trazable y el checklist final están completos. El `submission.csv` fue aceptado con `PipelineScore = 0.6509`; se cumple el **hito H3**. Sólo quedan acciones externas: PR a `main`, accesibilidad de la versión de Kaggle y preparación de la defensa.
 
 **Etapa 2 (sobresaliente):** E2-01 a E2-04, solo si queda tiempo después de E1-34. El análisis de errores recomienda **tiling tipo SAHI** ([error_analysis.md](error_analysis.md) §6).
 
@@ -64,7 +60,8 @@ Los 11 errores son de **percepción** (conteos con instancias de más o de menos
 | Tracing completo usado para analizar la propagación de errores | ✅ `trace.jsonl` por etapa y embudo de E1-31 |
 | Mejora justificada contra una línea base | ✅ tabla de experimentos |
 | Submission válido evaluado por Kaggle | ✅ `PipelineScore = 0.6509` (H1) |
-| Notebook, reporte y defensa | ⏳ E1-32, E1-33, E1-34 |
+| Notebook y reporte | ✅ E1-32, E1-33 y E1-34 completos |
+| Defensa | ⏳ Preparación manual del grupo |
 
 ## Cómo correr todo en Kaggle
 
@@ -89,7 +86,7 @@ Evaluación sobre un run de dev: `run_eval.py` (F1, consistencia y atributos), `
 ```bash
 python3.12 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
-pytest -q                        # 459 tests, todos tienen que pasar
+pytest -q                        # todos tienen que pasar
 ruff check . && ruff format --check .
 ```
 
@@ -107,7 +104,7 @@ ruff check . && ruff format --check .
   `%%writefile`; no depende de que el repositorio sea público.
 - [x] **Ejecutar y guardar E1-32 en Kaggle.**
 - [x] **Generar E1-33 desde los artefactos finales.**
-- [ ] **Cerrar E1-34.**
+- [x] **Cerrar E1-34 y el hito H3.**
 - [ ] **Pasar `desarrollo` a `main`** con un PR antes de entregar.
 - [ ] **Preparar la defensa:** 10 minutos; todos tienen que poder explicar cualquier parte.
 

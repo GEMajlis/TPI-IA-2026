@@ -263,10 +263,13 @@ Las referencias a campos del SceneJSON se resuelven siempre contra `data/competi
   `report/report_data.json` desde `grupo15_entrega_artifacts.zip`. El snapshot conserva las cifras
   usadas y el SHA-256 de cada JSON, CSV, manifiesto y traza de origen.
 
-### [ ] E1-34 · Verificación final de validez — ENT
+### [x] E1-34 · Verificación final de validez — ENT
 - **Objetivo:** checklist: el test de frontera pasa; la pipeline procesa una imagen externa al dataset sin errores; las semillas y el manifest están completos; el reporte coincide con la notebook; el submission es válido; el modelo LLM es ejecutable en Kaggle; el checklist de promoción del enunciado está cubierto punto por punto.
 - **Depende de:** E1-33
 - **Aceptación:** `docs/checklist_entrega.md` completado.
+- **Nota:** `scripts/validate_delivery.py` verifica notebook y reporte regenerables, hashes del ZIP,
+  manifests, semillas, GPU, trazas, métricas, schema y ambos modos de QA. El checklist separa las
+  verificaciones automáticas de las acciones humanas previas a la entrega y la defensa.
 
 ---
 

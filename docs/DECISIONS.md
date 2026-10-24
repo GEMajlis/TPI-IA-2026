@@ -34,7 +34,7 @@ Formato: fecha · decisión · alternativa descartada · evidencia. Las entradas
 - `size` es `small | medium | large` sin umbrales. Propuesta del EDA (H2): `area_ratio` < 0,333 % → small, < 3 % → medium, si no large (COCO 32²/96² px sobre 640×480). Queda en `scene.size_thresholds`; si el enunciado define otros, se cambian ahí.
 - Las convenciones de grilla 3×3, centroide y bbox quedan en `docs/schema_notes.md` §6.
 
-### D-07 · **pendiente (E1-08)** · `categories.csv` no trae sinónimos
+### D-07 · **resuelta (E1-08)** · `categories.csv` no trae sinónimos
 - El vocabulario ya viene limpio (sin `_` ni paréntesis). Para el experimento de sinónimos hace falta una fuente pública (metadata de categorías de LVIS v1) descargada en tiempo de ejecución.
 
 ### D-08 · Métrica de Kaggle
