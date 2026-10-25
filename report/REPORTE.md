@@ -135,15 +135,24 @@ existence 90,0%, position
 11 errores cerrados se atribuyeron a percepción, no a la
 interpretación del LLM.
 
-### 4.4 Experimento controlado
+### 4.4 Experimentos controlados
 
-Se cambió una sola variable: `apply_below_area_ratio: null -> 0.00333`. El F1 de máscaras en holdout pasó de
+Cada comparación cambia una sola variable respecto de la línea base y se decide con el holdout de
+40 imágenes (split estratificado con semilla 42), que no participa de la elección.
+
+**Variante descartada: post-proceso de máscaras solo en objetos chicos.** Se cambió una sola variable: `apply_below_area_ratio: null -> 0.00333`. El F1 de máscaras en holdout pasó de
 0,614 a 0,609
 (-0.0054); aunque tuning mejoró
 +0.0096, la variante se **descartó** porque empeoró el
 holdout. El costo de segmentación fue 127,1 s en la base y
 124,7 s en la variante. El oráculo sugería una mejora, pero el
 experimento end-to-end mostró que las cajas predichas cambian el efecto del post-proceso.
+
+**Intérprete LLM: prompt v1 → v2.** Con la percepción fija, el prompt v1 daba JSON válido en el
+65% de las consignas (las 20 descripciones quedaban `unsupported` por falta de un ejemplo de
+`describe`) y usaba categorías del benchmark como ejemplos. El v2, sin contenido del benchmark,
+llega al 100% y es el que se usa en este run. Es una medición previa a la corrida final,
+registrada en `docs/DECISIONS.md` (D-18).
 
 ### 4.5 Recursos, traza y entrega
 

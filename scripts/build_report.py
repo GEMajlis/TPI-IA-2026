@@ -82,6 +82,48 @@ def _submission_summary(path: Path) -> dict[str, Any]:
     }
 
 
+def _tuning_data(tuning_dir: Path) -> dict[str, Any] | None:
+    """Ajuste de umbral (E1-29/E1-30): resumen y puntos de la curva en holdout, si están."""
+    summaries = sorted(tuning_dir.glob("*/summary.json")) if tuning_dir.is_dir() else []
+    if not summaries:
+        return None
+    summary_path = summaries[-1]
+    curve_path = summary_path.parent / "curve.csv"
+    summary = _json(summary_path)
+    with curve_path.open(encoding="utf-8", newline="") as stream:
+        curve = list(csv.DictReader(stream))
+
+    def point(variant: str, threshold: float, split: str = "holdout") -> dict[str, float]:
+        row = next(
+            r
+            for r in curve
+            if r["variant"] == variant
+            and r["split"] == split
+            and abs(float(r["threshold"]) - threshold) < 1e-9
+        )
+        keys = ("precision", "recall", "f1", "preds_per_image")
+        return {k: float(row[k]) for k in keys}
+
+    base = summary["variants"]["base"]
+    cross_name = next(v for v in summary["variants"] if v != "base")
+    chosen = float(base["chosen_threshold"])
+    baseline = 0.10  # umbral inicial de la línea base (D-14)
+    return {
+        "summary_path": summary_path,
+        "curve_path": curve_path,
+        "chosen_threshold": chosen,
+        "baseline_threshold": baseline,
+        "holdout_baseline": point("base", baseline),
+        "holdout_chosen": point("base", chosen),
+        "tuning_chosen": point("base", chosen, "tuning"),
+        "cross_variant": cross_name,
+        "holdout_cross": point(
+            cross_name, float(summary["variants"][cross_name]["chosen_threshold"])
+        ),
+        "n_thresholds": len({r["threshold"] for r in curve}),
+    }
+
+
 def collect_report_data(artifacts: Path) -> dict[str, Any]:
     """Carga y cruza toda la evidencia que sustenta el reporte."""
     final_path = artifacts / "outputs" / "final_summary.json"
@@ -110,6 +152,10 @@ def collect_report_data(artifacts: Path) -> dict[str, Any]:
     missing = [str(path) for path in paths.values() if not path.is_file()]
     if missing:
         raise FileNotFoundError(f"Faltan artefactos: {missing}")
+    tuning = _tuning_data(artifacts / "outputs" / "tuning")
+    if tuning is not None:
+        paths["tuning_summary"] = tuning.pop("summary_path")
+        paths["tuning_curve"] = tuning.pop("curve_path")
 
     delivery = yaml.safe_load((ROOT / "configs" / "delivery.yaml").read_text(encoding="utf-8"))[
         "delivery"
@@ -137,6 +183,7 @@ def collect_report_data(artifacts: Path) -> dict[str, Any]:
         "qa": _json(paths["qa"]),
         "error_analysis": _json(paths["error_analysis"]),
         "experiment": experiments[-1],
+        **({"tuning": tuning} if tuning is not None else {}),
         "llm_benchmark": _json(paths["llm_benchmark"]),
         "dev_manifest": _json(paths["dev_manifest"]),
         "submission_manifest": _json(paths["submission_manifest"]),
@@ -163,6 +210,36 @@ def _pct(value: float, decimals: int = 1) -> str:
     return f"{100 * float(value):.{decimals}f}%".replace(".", ",")
 
 
+def _tuning_section(tuning: dict[str, Any] | None) -> str:
+    """Párrafo y tabla de la mejora adoptada (umbral); vacío si el ZIP no trae el ajuste."""
+    if tuning is None:
+        return ""
+    base, chosen = tuning["holdout_baseline"], tuning["holdout_chosen"]
+    cross = tuning["holdout_cross"]
+    rows = "\n".join(
+        f"| {label} | {_n(m['precision'])} | {_n(m['recall'])} | {_n(m['f1'])} | {_n(m['preds_per_image'], 1)} |"
+        for label, m in (
+            (f"Línea base, umbral {_n(tuning['baseline_threshold'], 2)}", base),
+            (f"**Umbral elegido, {_n(tuning['chosen_threshold'], 2)}**", chosen),
+            (f"Umbral elegido + NMS entre clases ({tuning['cross_variant']})", cross),
+        )
+    )
+    delta = (chosen["f1"] - base["f1"]) * 100
+    return f"""**Mejora adoptada: umbral de detección.** Sobre la caché de detecciones crudas se barrieron
+{tuning["n_thresholds"]} umbrales; el de máximo F1 de cajas en tuning fue
+{_n(tuning["chosen_threshold"], 2)} (F1 {_n(tuning["tuning_chosen"]["f1"])} en tuning). En holdout:
+
+| Configuración | Precisión | Recall | F1 de cajas | Predicciones por imagen |
+|---|---:|---:|---:|---:|
+{rows}
+
+El umbral elegido **mejora el F1 de holdout en {_n(delta, 1)} puntos** frente a la línea base: cambia
+recall por precisión y reduce a la mitad las predicciones por imagen. El NMS entre clases no aporta
+y queda apagado.
+
+"""
+
+
 def render_report(data: dict[str, Any]) -> str:
     """Renderiza el Markdown sin recalcular cifras."""
     group = data["group"]
@@ -178,6 +255,7 @@ def render_report(data: dict[str, Any]) -> str:
     errors = data["error_analysis"]
     experiment = data["experiment"]
     llm = data["llm_benchmark"]
+    tuning_section = _tuning_section(data.get("tuning"))
     manifest = data["dev_manifest"]
     submission = data["submission"]
     final = data["final"]
@@ -335,15 +413,24 @@ existence {_pct(qa["llm"]["by_type"]["existence"]["accuracy_vs_oracle"])}, posit
 {sum(qa["llm"]["error_source"].values())} errores cerrados se atribuyeron a percepción, no a la
 interpretación del LLM.
 
-### 4.4 Experimento controlado
+### 4.4 Experimentos controlados
 
-Se cambió una sola variable: `{experiment["change"]}`. El F1 de máscaras en holdout pasó de
+Cada comparación cambia una sola variable respecto de la línea base y se decide con el holdout de
+40 imágenes (split estratificado con semilla 42), que no participa de la elección.
+
+{tuning_section}**Variante descartada: post-proceso de máscaras solo en objetos chicos.** Se cambió una sola variable: `{experiment["change"]}`. El F1 de máscaras en holdout pasó de
 {_n(experiment["base_holdout_f1_mask"])} a {_n(experiment["exp_holdout_f1_mask"])}
 ({float(experiment["delta_holdout_f1_mask"]):+.4f}); aunque tuning mejoró
 {float(experiment["delta_tuning_f1_mask"]):+.4f}, la variante se **descartó** porque empeoró el
 holdout. El costo de segmentación fue {_n(experiment["base_seg_s"], 1)} s en la base y
 {_n(experiment["exp_seg_s"], 1)} s en la variante. El oráculo sugería una mejora, pero el
 experimento end-to-end mostró que las cajas predichas cambian el efecto del post-proceso.
+
+**Intérprete LLM: prompt v1 → v2.** Con la percepción fija, el prompt v1 daba JSON válido en el
+65% de las consignas (las 20 descripciones quedaban `unsupported` por falta de un ejemplo de
+`describe`) y usaba categorías del benchmark como ejemplos. El v2, sin contenido del benchmark,
+llega al 100% y es el que se usa en este run. Es una medición previa a la corrida final,
+registrada en `docs/DECISIONS.md` (D-18).
 
 ### 4.5 Recursos, traza y entrega
 

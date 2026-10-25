@@ -45,3 +45,27 @@ def test_reporte_tiene_la_estructura_pedida() -> None:
     ):
         assert heading in report
     assert "TODO" not in report
+
+
+def test_seccion_de_umbral_cuando_el_zip_trae_el_ajuste() -> None:
+    data = json.loads(DEFAULT_DATA.read_text(encoding="utf-8"))
+    point = {"precision": 0.72, "recall": 0.62, "f1": 0.666, "preds_per_image": 28.2}
+    data["tuning"] = {
+        "chosen_threshold": 0.18,
+        "baseline_threshold": 0.10,
+        "holdout_baseline": {
+            "precision": 0.55,
+            "recall": 0.71,
+            "f1": 0.619,
+            "preds_per_image": 57.0,
+        },
+        "holdout_chosen": point,
+        "tuning_chosen": {**point, "f1": 0.646},
+        "cross_variant": "cross_nms_0.8",
+        "holdout_cross": {**point, "f1": 0.6667},
+        "n_thresholds": 25,
+    }
+    report = render_report(data)
+    assert "**Mejora adoptada: umbral de detección.**" in report
+    assert "mejora el F1 de holdout en 4,7 puntos" in report
+    assert "Variante descartada" in report and "prompt v1 → v2" in report
