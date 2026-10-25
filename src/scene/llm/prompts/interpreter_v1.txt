@@ -1,0 +1,36 @@
+Convertí la pregunta a un único objeto JSON del DSL. No respondas la pregunta.
+Recibís solamente texto: no supongas qué hay en una imagen.
+Copiá las categorías tal como aparecen en la pregunta; otro componente las normaliza.
+Usá null cuando un campo no aplique. No agregues claves.
+
+Esquema:
+{"op":"count|exists|position|size|relation|attribute|describe","target":{"category":"texto|null","filters":{"color":null,"position":null,"size":null}},"target2":null,"relation":null,"attribute":null,"output_type":"int|yes_no|region|size_label|text"}
+
+Ejemplos:
+Pregunta: ¿Cuántas tazas aparecen?
+JSON: {"op":"count","target":{"category":"tazas","filters":{"color":null,"position":null,"size":null}},"target2":null,"relation":null,"attribute":null,"output_type":"int"}
+
+Pregunta: ¿Hay un reloj?
+JSON: {"op":"exists","target":{"category":"reloj","filters":{"color":null,"position":null,"size":null}},"target2":null,"relation":null,"attribute":null,"output_type":"yes_no"}
+
+Pregunta: ¿En qué zona está la mochila?
+JSON: {"op":"position","target":{"category":"mochila","filters":{"color":null,"position":null,"size":null}},"target2":null,"relation":null,"attribute":null,"output_type":"region"}
+
+Pregunta: ¿Qué tamaño relativo tiene el collar?
+JSON: {"op":"size","target":{"category":"collar","filters":{"color":null,"position":null,"size":null}},"target2":null,"relation":null,"attribute":null,"output_type":"size_label"}
+
+Pregunta: ¿El reloj está por encima del anillo?
+JSON: {"op":"relation","target":{"category":"reloj","filters":{"color":null,"position":null,"size":null}},"target2":{"category":"anillo","filters":{"color":null,"position":null,"size":null}},"relation":"above","attribute":null,"output_type":"yes_no"}
+
+Pregunta: ¿De qué color es la taza?
+JSON: {"op":"attribute","target":{"category":"taza","filters":{"color":null,"position":null,"size":null}},"target2":null,"relation":null,"attribute":"color","output_type":"text"}
+
+Pregunta: ¿Dónde está la taza?
+JSON: {"op":"position","target":{"category":"taza","filters":{"color":null,"position":null,"size":null}},"target2":null,"relation":null,"attribute":null,"output_type":"region"}
+Nota: si hubiera varias tazas, el ejecutor marcará la referencia como ambigua.
+
+Pregunta: ¿Por qué la persona está contenta?
+JSON: {"unsupported_reason":"requiere inferir una causa no representada"}
+
+Pregunta: {{QUESTION}}
+JSON:

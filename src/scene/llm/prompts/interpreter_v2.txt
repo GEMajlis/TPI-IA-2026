@@ -1,0 +1,52 @@
+Convertí la pregunta a un único objeto JSON del DSL. No respondas la pregunta.
+Recibís solamente texto: no supongas qué hay en una imagen.
+Copiá las categorías tal como aparecen en la pregunta; otro componente las normaliza.
+Usá null cuando un campo no aplique. No agregues claves.
+
+Esquema:
+{"op":"count|exists|position|size|relation|attribute|describe","target":{"category":"texto|null","filters":{"color":null,"position":null,"size":null}},"target2":null,"relation":null,"attribute":null,"output_type":"int|yes_no|region|size_label|text"}
+Relaciones posibles: left_of, right_of, above, below, overlaps, near, on_top_of.
+
+Ejemplos:
+Pregunta: ¿Cuántas tazas aparecen?
+JSON: {"op":"count","target":{"category":"tazas","filters":{"color":null,"position":null,"size":null}},"target2":null,"relation":null,"attribute":null,"output_type":"int"}
+
+Pregunta: ¿Cuántas instancias de la categoría "libro" aparecen en la imagen?
+JSON: {"op":"count","target":{"category":"libro","filters":{"color":null,"position":null,"size":null}},"target2":null,"relation":null,"attribute":null,"output_type":"int"}
+
+Pregunta: ¿Hay algún paraguas?
+JSON: {"op":"exists","target":{"category":"paraguas","filters":{"color":null,"position":null,"size":null}},"target2":null,"relation":null,"attribute":null,"output_type":"yes_no"}
+
+Pregunta: ¿Hay al menos una instancia de la categoría "gato" en la imagen?
+JSON: {"op":"exists","target":{"category":"gato","filters":{"color":null,"position":null,"size":null}},"target2":null,"relation":null,"attribute":null,"output_type":"yes_no"}
+
+Pregunta: ¿En qué zona de la imagen está la instancia de "lámpara"?
+JSON: {"op":"position","target":{"category":"lámpara","filters":{"color":null,"position":null,"size":null}},"target2":null,"relation":null,"attribute":null,"output_type":"region"}
+
+Pregunta: ¿Qué tamaño relativo tiene la silla?
+JSON: {"op":"size","target":{"category":"silla","filters":{"color":null,"position":null,"size":null}},"target2":null,"relation":null,"attribute":null,"output_type":"size_label"}
+
+Pregunta: ¿La instancia de "lámpara" está por encima de la instancia de "silla"?
+JSON: {"op":"relation","target":{"category":"lámpara","filters":{"color":null,"position":null,"size":null}},"target2":{"category":"silla","filters":{"color":null,"position":null,"size":null}},"relation":"above","attribute":null,"output_type":"yes_no"}
+
+Pregunta: ¿El auto está a la izquierda del gato?
+JSON: {"op":"relation","target":{"category":"auto","filters":{"color":null,"position":null,"size":null}},"target2":{"category":"gato","filters":{"color":null,"position":null,"size":null}},"relation":"left_of","attribute":null,"output_type":"yes_no"}
+
+Pregunta: ¿Cuántas tazas rojas hay?
+JSON: {"op":"count","target":{"category":"tazas","filters":{"color":"rojo","position":null,"size":null}},"target2":null,"relation":null,"attribute":null,"output_type":"int"}
+
+Pregunta: ¿De qué color es el paraguas?
+JSON: {"op":"attribute","target":{"category":"paraguas","filters":{"color":null,"position":null,"size":null}},"target2":null,"relation":null,"attribute":"color","output_type":"text"}
+
+Pregunta: Hacé un resumen de lo que se ve.
+JSON: {"op":"describe","target":null,"target2":null,"relation":null,"attribute":null,"output_type":"text"}
+
+Pregunta: ¿Dónde está la taza?
+JSON: {"op":"position","target":{"category":"taza","filters":{"color":null,"position":null,"size":null}},"target2":null,"relation":null,"attribute":null,"output_type":"region"}
+Nota: si hubiera varias tazas, el ejecutor marcará la referencia como ambigua.
+
+Pregunta: ¿Por qué la persona está contenta?
+JSON: {"unsupported_reason":"requiere inferir una causa no representada"}
+
+Pregunta: {{QUESTION}}
+JSON:

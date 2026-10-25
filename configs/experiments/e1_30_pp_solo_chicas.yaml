@@ -1,0 +1,7 @@
+# E1-30 · Post-proceso de máscaras solo en máscaras chicas (D-15).
+# Hipótesis: con cajas GT el post-proceso sube IoU ≥ 0,5 en small (72 % → 75 %) y lo baja en
+# medium (96 % → 94 %) y large (97 % → 95 %); aplicarlo solo a las chicas sube el F1 de máscaras.
+# Única variable respecto de base.yaml. El umbral es el corte de `small` (scene.size_thresholds).
+segmentation:
+  postprocess:
+    apply_below_area_ratio: 0.00333

@@ -31,6 +31,7 @@ class Prediction:
     score: float
     bbox_xyxy: tuple[float, float, float, float]
     mask: dict | None = None
+    pred_id: str | None = None  # id del objeto en el SceneJSON (para emparejar atributos)
 
 
 @dataclass
@@ -44,13 +45,17 @@ class MatchEvent:
     iou: float | None
     area_ratio: float  # del GT para tp/fn, de la predicción para fp/ignored
     reason: str = ""
+    pred_id: str | None = None
+    gt_id: int | None = None
 
 
 def predictions_from_scenes(scenes: dict[str, dict]) -> dict[str, list[Prediction]]:
     """Convierte SceneJSON (por image_id) en predicciones."""
     return {
         image_id: [
-            Prediction(o["category_id"], o["confidence"], tuple(o["bbox"]), o.get("mask"))
+            Prediction(
+                o["category_id"], o["confidence"], tuple(o["bbox"]), o.get("mask"), o.get("id")
+            )
             for o in scene["objects"]
         ]
         for image_id, scene in scenes.items()
@@ -118,7 +123,9 @@ def _pred_area_ratio(p: Prediction, img: ImageGT, iou_type: str) -> float:
 def _pred_event(p: Prediction, img: ImageGT, iou_type: str, kind: str, reason: str):
     """Evento de una predicción sin match (fp o ignorada)."""
     ratio = _pred_area_ratio(p, img, iou_type)
-    return MatchEvent(img.image_id, p.category_id, kind, p.score, None, ratio, reason)
+    return MatchEvent(
+        img.image_id, p.category_id, kind, p.score, None, ratio, reason, pred_id=p.pred_id
+    )
 
 
 def match_image(
@@ -163,7 +170,16 @@ def match_image(
                 matched[j] = True
                 ratio = gts[j].area / img_area
                 events.append(
-                    MatchEvent(img.image_id, cid, "tp", p.score, float(ious[i, j]), ratio)
+                    MatchEvent(
+                        img.image_id,
+                        cid,
+                        "tp",
+                        p.score,
+                        float(ious[i, j]),
+                        ratio,
+                        pred_id=p.pred_id,
+                        gt_id=gts[j].id,
+                    )
                 )
             elif cid in img.not_exhaustive_category_ids:
                 events.append(_pred_event(p, img, iou_type, "ignored", "not_exhaustive"))
@@ -172,7 +188,9 @@ def match_image(
         for j, g in enumerate(gts):
             if not matched[j]:
                 events.append(
-                    MatchEvent(img.image_id, cid, "fn", None, None, g.area / img_area, "missed")
+                    MatchEvent(
+                        img.image_id, cid, "fn", None, None, g.area / img_area, "missed", gt_id=g.id
+                    )
                 )
     return events
 

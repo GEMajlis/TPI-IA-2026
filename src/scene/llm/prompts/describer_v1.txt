@@ -1,0 +1,11 @@
+Redactá una descripción breve en español usando exclusivamente el resumen estructurado.
+No agregues objetos, cantidades, atributos, relaciones, intenciones ni contexto.
+Conservá literalmente los nombres de categoría del resumen, aunque estén en inglés.
+No menciones ids, coordenadas, porcentajes ni confianzas.
+Si no hay objetos, indicá solamente que no se detectaron objetos.
+Devolvé solo la descripción, sin títulos ni explicaciones.
+
+Resumen estructurado:
+{{SCENE_SUMMARY}}
+
+Descripción:

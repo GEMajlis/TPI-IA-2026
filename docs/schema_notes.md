@@ -92,5 +92,5 @@ La fila de ejemplo usa un píxel en (0, 0): `bbox [0,0,1,1]`, `counts [0,1,H*W-1
 | `near`, `on_top_of` | Fuera de `relations`; si se implementan, van en un campo propio `extra_relations` | D-04 |
 | Máscara vacía | No valida (`area_ratio > 0`): el objeto se descarta o se usa la caja como máscara, con la marca correspondiente | E1-13 |
 | Ids de objetos | Libres; usamos `obj_<n>` únicos por imagen | E1-16 |
-| Respuesta cuando hay varias instancias en una pregunta singular | Pendiente (ver D-10) | E1-22 |
+| Respuesta cuando hay varias instancias en una pregunta singular | La de mayor confianza, con `status: ambiguous` (D-10) | E1-22 |
 | Texto de `answer` y `normalized_answer` de `description` | Libre; definimos la plantilla en E1-27 | E1-27 |

@@ -187,7 +187,12 @@ def _write_json(path: Path, data: Any) -> None:
 def start_run(cfg: dict, run_id: str | None = None) -> RunContext:
     """Fija la semilla, crea `outputs/runs/<run_id>/` y escribe `run_manifest.json`."""
     set_seed(cfg["seed"])
-    run_id = run_id or make_run_id(cfg)
+    if run_id is None:
+        # Dos runs con la misma config en el mismo segundo: se agrega un sufijo.
+        base_id = run_id = make_run_id(cfg)
+        n = 1
+        while (Path(cfg["paths"]["outputs"]) / run_id).exists():
+            run_id, n = f"{base_id}-{n}", n + 1
     run_dir = Path(cfg["paths"]["outputs"]) / run_id
     run_dir.mkdir(parents=True, exist_ok=False)
     device = resolve_device(cfg.get("device", "auto"))

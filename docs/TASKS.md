@@ -89,118 +89,154 @@ Las referencias a campos del SceneJSON se resuelven siempre contra `data/competi
 - **Aceptación:** tests unitarios de NMS; los parámetros salen de la config.
 - **Nota (interfaz):** `postprocess(dets, cfg["detection"]) -> PostprocessResult(detections, counts)`; `counts` = sobrevivientes por paso (`raw`, `threshold`, `nms_per_class`, [`nms_cross_class`], `max_detections`) y va a `extra.counts` de la traza. NMS en numpy (sin torchvision). Umbral inicial 0,1 (se ajusta en E1-29); NMS entre clases apagado (D-09).
 
-### [ ] E1-11 · SAM2 con cajas como prompt — PER
+### [x] E1-11 · SAM2 con cajas como prompt — PER
 - **Objetivo:** `segmentation/sam2.py` (batch de cajas por imagen, multimask y selección por IoU predicho) y `segmentation/postprocess.py` (recorte a la caja con margen, componente principal, relleno de huecos).
 - **Depende de:** E1-10
 - **Aceptación:** smoke test; máscaras de debug superpuestas; `mask_score` guardado; caché de máscaras por imagen (RLE en disco).
+- **Nota (interfaz):** `Sam2Segmenter.segment(image, dets) -> list[SegmentedObject]` y `build_segmenter(cfg, device)` en `segmentation/sam2.py`; `SegmentedObject` suma `raw_area` (píxeles antes del post-proceso). El embedding de imagen se calcula una vez y las cajas van en lotes de `box_batch_size`. Caché `masks/<image_id>.json` con RLE (`save_segmented`/`load_segmented`). `postprocess_mask` con pasos apagables desde `segmentation.postprocess`. `scripts/run_segmentation.py --from-run <run|latest>` reutiliza las detecciones de `run_detection.py` y con `--eval` da F1 de cajas y de máscaras. Requiere `torchvision` (lo pide el procesador de SAM2 en `transformers`). Los checkpoints `facebook/sam2.1-*` son de video y avisan al cargarse en `Sam2Model`: es lo esperado. Smoke test en CPU con `hiera-tiny`, 2 imágenes: ~9 s/imagen, F1 de máscaras 0,59.
 
-### [ ] E1-12 · Evaluación de segmentación con oráculo — EVA
+### [x] E1-12 · Evaluación de segmentación con oráculo — EVA
 - **Objetivo:** `eval/segmentation.py`: F1 de máscaras (usando E1-07 con IoU de máscaras), mIoU de pares matcheados, y una corrida de SAM2 con **cajas GT** como prompt (oráculo, solo en eval) para separar el error de detección del de segmentación.
 - **Depende de:** E1-07, E1-11
 - **Aceptación:** tabla comparativa entre cajas predichas y cajas GT en `metrics_segmentation.json`.
+- **Nota (interfaz):** corrido en Kaggle (D-15). `oracle_rows` / `summarize_oracle` / `predicted_pairs_summary` en `eval/segmentation.py`: SAM2 con cajas GT y post-proceso apagado (una sola pasada evalúa la máscara cruda y la post-procesada), mIoU y fracción con IoU ≥ 0,5 por tamaño, correlación `mask_score`–IoU, y con cajas predichas cuántos TP de cajas se pierden en máscaras. `scripts/eval_segmentation.py --run <run de dev>` escribe `metrics_segmentation_oracle.json` (nombre propio, para no pisar `metrics_segmentation.json`) y `segmentation_oracle.csv`. Smoke test (hiera-tiny, 3 imágenes): mIoU oráculo 0,85; el post-proceso no mejora y baja medium de 0,94 a 0,90 → candidato a experimento (E1-30).
 
 ## Escena
 
-### [ ] E1-13 · Propiedades geométricas — ESC
+### [x] E1-13 · Propiedades geométricas — ESC
 - **Objetivo:** `scene/scene/properties.py`: área, área relativa, centroide, posición 3×3 (nombres oficiales) y tamaño `small|medium|large`, calculados desde la **máscara decodificada del RLE**.
 - **Depende de:** E1-03, E1-04
 - **Aceptación:** tests con máscaras sintéticas para cada una de las 9 regiones y los bordes; máscara vacía → fallback a la caja con la marca correspondiente.
+- **Nota (interfaz):** `properties_from_mask(mask, small_max, medium_max, source)` / `properties_from_rle(...)` / `properties_from_config(mask, cfg)` → `GeometricProperties` (`area`, `area_ratio`, `centroid` [x, y], `position`, `size`, `mask_bbox` xyxy exclusivo, `source`). Para máscaras vacías, `ensure_nonempty(mask, box)` devuelve la caja rasterizada (al menos 1 px) con `source="box_fallback"`: el builder (E1-16) debe guardar **esa** máscara en el RLE, así `area_ratio > 0` y las propiedades coinciden con la máscara entregada. Convenciones de `docs/schema_notes.md` §6; `size_label` usa los mismos cortes que `eval.lvis_federated.size_label`.
 
-### [ ] E1-14 · Color dominante — ESC
+### [x] E1-14 · Color dominante — ESC
 - **Objetivo:** `scene/scene/color.py`: k-means en Lab sobre los píxeles de la máscara, mapeo a una paleta nombrada y una confianza (proporción del cluster dominante).
 - **Depende de:** E1-13
 - **Aceptación:** tests con parches de color sólido y con mezcla; paleta definida en la config.
+- **Nota (interfaz):** `dominant_color(image, mask, palette, k, max_pixels, min_pixels, seed)` / `dominant_color_from_config(image, mask, cfg)` → `DominantColor(name, rgb, confidence, lab_distance)` o `None` si la máscara tiene menos de `min_pixels` (color desconocido). k-means de sklearn en Lab (OpenCV, float) con submuestreo y semilla fija; paleta de 11 colores en `scene.color.palette`. ~40 ms por objeto en CPU.
 
-### [ ] E1-15 · Relaciones espaciales — ESC
+### [x] E1-15 · Relaciones espaciales — ESC
 - **Objetivo:** `scene/scene/relations.py`: `left_of`, `right_of`, `above`, `below`, `near`, `overlaps`, `on_top_of`, con márgenes configurables, tope de pares y valores de relación del schema.
 - **Depende de:** E1-13
 - **Aceptación:** tests sintéticos por relación, incluidos casos límite (centroides alineados → sin relación horizontal).
+- **Nota (interfaz):** `compute_relations(objs: list[RelObject], width, height, cfg["scene"]["relations"]) -> RelationsResult(relations, extra_relations, stats)`. `RelObject(id, centroid, box, mask, confidence)` usa la caja de la máscara (`mask_bbox`). `relations` solo con el enum del schema (direccionales por centroide con margen, en los dos sentidos; `overlaps` simétrica por IoU de máscaras); `near` y `on_top_of` van en `extra_relations` (D-04). Operaciones con máscaras solo en pares cuyas cajas se tocan. El tope `max_relations` prioriza pares de mayor confianza y nunca deja una relación sin su inversa. En una imagen real con 50 objetos: 4370 relaciones en 0,07 s. **Ojo (E1-18):** con ~100 objetos son ~17 000 relaciones (~1 MB de JSON por escena); si el submission queda muy pesado, bajar `max_relations` o limitar los objetos que entran a relaciones.
 
-### [ ] E1-16 · Builder del SceneJSON — ESC
+### [x] E1-16 · Builder del SceneJSON — ESC
 - **Objetivo:** `scene/scene/builder.py`: arma el SceneJSON (imagen, objetos con ids únicos, clase, confianza, bbox, RLE, propiedades, atributos, relaciones y origen observado/derivado/desconocido) y lo valida con E1-03.
 - **Depende de:** E1-11, E1-13, E1-14, E1-15
 - **Aceptación:** el JSON valida contra el schema; imagen sin detecciones → JSON válido con lista vacía.
+- **Nota (interfaz):** `build_scene(image_id, image, segmented, cfg) -> (scene, stats)` en `scene/scene/builder.py`; valida con `assert_valid_scene`. Ids `obj_<n>` ordenados por confianza. `bbox` = caja del detector (observada); además `category_name`, `area_px`, `mask_bbox`, `mask_score`, `attributes` (color, confianza y RGB), `provenance` (observed/derived/unknown por campo), `source` y `extra_relations`. Si la máscara queda vacía se guarda la caja rasterizada (`source.mask = "box_fallback"`). Peso: una escena de 74 objetos ocupa ~750 KB, >80 % en `relations`.
 
-### [ ] E1-17 · Orquestador end-to-end — INF
+### [x] E1-17 · Orquestador end-to-end — INF
 - **Objetivo:** `scene/pipeline.py` y `scripts/run_pipeline.py`: recorre imágenes, corre las etapas con caché, traza y guarda el SceneJSON por imagen. Flags `--split`, `--limit` y `--from-stage`.
 - **Depende de:** E1-16, E1-05
 - **Aceptación:** corrida completa de dev en Kaggle con GPU; una segunda corrida que solo cambia el umbral reutiliza la caché de detecciones crudas.
+- **Nota (interfaz):** corrida completa de dev en Kaggle (120 imágenes, 0 errores, mismos F1 que las corridas por etapa). `Pipeline(cfg, ctx, tracer, vocab, make_detector, make_segmenter, from_stage, debug).run(images)` en `scene/pipeline.py`; los modelos se cargan solo si hay algo que no está en caché. Caché compartida entre runs en `paths.cache`, con clave = hash de la config de la etapa y las anteriores (`stage_keys`): cambiar el umbral reutiliza las detecciones crudas; cambiar relaciones o color reutiliza también las máscaras (testeado con modelos falsos). Traza con `status=cached`. `scripts/run_pipeline.py` admite `--split` con varios splits, `--images`, `--limit`, `--from-stage`, `--debug` y `--eval`. `start_run` ahora agrega un sufijo si el `run_id` ya existe. Probado en CPU sobre una imagen externa al dataset.
 
-### [ ] E1-18 · Submission writer — ENT
+### [x] E1-18 · Submission writer — ENT
 - **Objetivo:** `scene/io/submission.py` y `scripts/make_submission.py`: 80 filas (60 de test y 20 del benchmark), columnas `image_id,SceneJSON`, mismo orden e ids que `sample_submission.csv`, cada JSON validado.
 - **Depende de:** E1-17
 - **Aceptación:** validación completa sin errores; **hito H1** al subirlo a Kaggle y obtener un puntaje.
+- **Nota (interfaz):** submission completo generado y aceptado por Kaggle el 2026-10-24
+  (80 filas válidas, 15,4 MB, con `questions` y `questions_llm`), `PipelineScore = 0.6509`;
+  **hito H1 cumplido**. `build_submission(scenes, cfg) -> (rows, errors)`, `write_submission`,
+  `read_submission` en `scene/io/submission.py`.
+  `scripts/make_submission.py --run <run|latest> [...]` junta escenas de varios runs, valida las
+  80 filas y no escribe nada si alguna falla.
+  Testeado con las 80 filas de `sample_submission.csv`.
 
-### [ ] E1-19 · Chequeo de consistencia de la representación — EVA
+### [x] E1-19 · Chequeo de consistencia de la representación — EVA
 - **Objetivo:** `eval/scene_consistency.py`: verifica que el área, el centroide, la posición y el tamaño coincidan con la máscara decodificada; que las relaciones sean coherentes (simetría left/right, ids existentes); y que la evidencia apunte a ids válidos. Además mide la exactitud de posición, tamaño y color contra GT en pares matcheados.
 - **Depende de:** E1-16, E1-07
 - **Aceptación:** reporte `metrics_scene.json`; 0 inconsistencias en el run base.
+- **Nota (interfaz):** `internal_consistency(scenes, cfg)` (sin GT: área, centroide, posición y tamaño recalculados desde el RLE con pycocotools y código propio; relaciones con ids válidos, enum, inversa presente y dirección coherente con los centroides; evidencias; fracción de máscara fuera de la caja) y `attribute_accuracy(scenes, gt, cfg, images)` (pares TP de máscaras: posición, tamaño y color contra los de la máscara GT) en `eval/scene_consistency.py`. Para emparejar, `Prediction` y `MatchEvent` ganan `pred_id`/`gt_id` (opcionales). `scripts/run_eval.py --run <run|latest>` calcula F1 de cajas y máscaras (con desglose por tamaño), consistencia y atributos, y escribe `metrics_scene.json`. Smoke test con 3 imágenes de dev: 0 inconsistencias; posición 94 %, tamaño 100 %, color 94 %.
 
 ## Preguntas
 
-### [ ] E1-20 · DSL de consultas — QA
+### [x] E1-20 · DSL de consultas — QA
 - **Objetivo:** `qa/dsl.py` con los modelos pydantic del DSL (`docs/PLAN.md §3`) y el resultado (`answer`, `normalized_answer`, `evidence`, `confidence`, `status`).
 - **Depende de:** E1-03
 - **Aceptación:** cada pregunta del benchmark tiene una representación DSL escrita a mano en un fixture de tests (solo para tests, nunca para inferencia).
+- **Nota (interfaz):** `Query(op, target, target2, relation, attribute, output_type, reason)` con `Target(category: str, filters: Filters(color, position, size))`; `extra="forbid"` y validación cruzada (`relation`/`target2` solo con `op="relation"`, `attribute` solo con `op="attribute"`, `output_type` se completa desde la op y tiene que coincidir). Se agregó la op `unsupported` (con `reason`) para que el intérprete LLM (E1-26) pueda rechazar preguntas que no entran en ninguna op. `QueryResult(answer, normalized_answer, evidence, confidence, status, detail)` y `to_question_answer(question_id, type, question, query=None)` arman el item de `questions` (o de `questions_llm`, con `interpreted_query`) más los campos propios `status` y `status_detail`. Mapeos `QUESTION_TYPE_TO_OP` y `ANSWER_FORMAT_TO_OUTPUT`. Fixture: `tests/fixtures/benchmark_dsl.json` (60 consignas; el test controla op, formato, categorías y que el predicado coincida con la frase del texto).
 
-### [ ] E1-21 · Category matcher — QA
+### [x] E1-21 · Category matcher — QA
 - **Objetivo:** `qa/category_matcher.py`: texto → category_id mediante normalización, plurales y sinónimos, con similitud de embeddings como último recurso y umbral; devuelve `None` si no hay match.
 - **Depende de:** E1-08
 - **Aceptación:** tests con plurales, sinónimos y una categoría fuera de vocabulario (→ None).
+- **Nota (interfaz):** `CategoryMatcher(categories, lexicon, synonyms, embedder, embedding_threshold).match(text) -> CategoryMatch(category_id, category_name, method, score, matched_text) | None` (y `match_id`); `matcher_from_config(cfg, categories, device)` lee `qa.matcher`. Para cada forma del texto (tal cual y después en singular, en inglés y en español, palabra por palabra) busca nombre → léxico español (`configs/lexicon_es.yaml`, traducción manual de las 120 categorías) → sinónimos LVIS; un texto que apunta a dos categorías dentro de un nivel se descarta (`dropped`). Último recurso: LaBSE con umbral 0,90 (D-13), cargado recién en el primer uso. Las 50 clases en español del benchmark se resuelven por léxico. `scripts/calibrate_matcher.py` deja la calibración en `outputs/matcher/`.
 
-### [ ] E1-22 · Ejecutor determinista — QA
+### [x] E1-22 · Ejecutor determinista — QA
 - **Objetivo:** `qa/executor.py`: ejecuta el DSL sobre el SceneJSON para todas las ops, con filtros por color, posición y tamaño, evidencia, confianza (regla del PLAN §4.5) y estados `unsupported`, `insufficient_information` y `ambiguous`. Normaliza respuestas: entero, yes/no, región oficial o etiqueta de tamaño.
 - **Depende de:** E1-20, E1-21, E1-16
 - **Aceptación:** tests por op sobre SceneJSON sintéticos, incluidos los tres estados no-ok; la evidencia siempre apunta a ids existentes.
+- **Nota (interfaz):** `Executor(resolve_category, category_names, palette, absent_confidence, color_aliases, display_names).execute(query, scene) -> QueryResult`; `executor_from_config(cfg, resolve_category, category_names, display_names)` (`resolve_category` = `CategoryMatcher.match_id`). Estados: categoría fuera de vocabulario, color fuera de la paleta u op `unsupported` → `unsupported`; pregunta singular sin instancias → `insufficient_information`; varias instancias → `ambiguous` (D-10). En los estados no-ok, `normalized_answer` es el nombre del estado y la confianza es 0. `near`/`on_top_of` se buscan en `extra_relations`. La confianza de "no hay" es 1 − máx. de las instancias descartadas por filtros, o 1 − `detection.score_threshold` si no hay ninguna. El texto de `answer` sale de `qa/verbalize.py` (E1-27) con el nombre en español; `describe` usa una plantilla determinista (conteos y objeto más confiable).
 
-### [ ] E1-23 · Modo determinista (adapter) e integración en `questions` — QA
+### [x] E1-23 · Modo determinista (adapter) e integración en `questions` — QA
 - **Objetivo:** `qa/structured_adapter.py` traduce los campos estructurados del benchmark al DSL sin LLM. Integra `questions` en los SceneJSON de las 20 imágenes del benchmark, conservando `question_id`, `type` y `question`.
 - **Depende de:** E1-22, E1-18
 - **Aceptación:** las 60 consignas del benchmark (20 de descripción + 40 estructuradas, ver `docs/DECISIONS.md`) producen una respuesta o un estado explícito; el submission valida; **hito H2** si además F1 ≥ 0,40.
+- **Nota:** corrido en Kaggle sobre las 20 imágenes del benchmark: las 60 consignas responden (51 `ok`, 5 `ambiguous`, 4 `insufficient_information`, 0 `unsupported`) y el submission valida (H2: F1 de cajas 0,653 ≥ 0,40). `query_from_benchmark(q, phrases)` usa `type` y `class_en`; el predicado se busca en el texto con `qa.adapter.relation_phrases` (gana la frase más larga). El test compara las 60 traducciones contra el fixture escrito a mano de E1-20. `answer_questions(...)` arma los items (con `interpreted_query` y `status`). `scripts/run_qa.py --run <run|latest>` agrega `questions` a `scenes/<image_id>.json` del run, valida cada escena, traza la etapa `qa_deterministic` y guarda `qa_deterministic.csv`; después se corre `make_submission.py`. Probado con un run armado a partir de las 80 filas de `sample_submission.csv`: las 60 consignas responden y el submission valida.
 
-### [ ] E1-24 · Evaluación de QA — EVA
+### [x] E1-24 · Evaluación de QA — EVA
 - **Objetivo:** `eval/qa_eval.py`:
   - **Fidelidad:** recomputa cada respuesta desde el SceneJSON predicho y verifica que la evidencia sostenga la respuesta.
   - **Exactitud contra GT:** construye un SceneJSON desde GT (`eval/oracle.py`, solo en eval) y corre el mismo ejecutor.
   - Exactitud por tipo y por modo, y tasa de unsupported.
 - **Depende de:** E1-23, E1-07
 - **Aceptación:** tabla con exactitud sobre el JSON predicho y sobre el JSON oráculo por tipo de pregunta, que permite atribuir cada error a percepción o a razonamiento.
+- **Nota (interfaz):** `eval/oracle.py::oracle_scene(img_gt, image, cfg, names)` arma el SceneJSON desde el GT con el mismo builder (confianza 1). `eval/qa_eval.py`: `evidence_supports` (la evidencia sostiene la respuesta: conteo = largo de la evidencia, existencia ⇔ evidencia no vacía, posición/tamaño del objeto de evidencia, tripla de relación presente o ausente), `reexecutes` (volver a ejecutar el `interpreted_query` da lo mismo), `evaluate_mode(mode, ...)` (referencia = mismo ejecutor con la consulta estructurada sobre el oráculo; atribución `perception` / `interpretation` (DSL del LLM ≠ estructurado) / `oracle_not_ok`) y `summarize`. `scripts/eval_qa.py --run <run>` escribe `metrics_qa.json` y `qa_eval.csv`. **Ojo:** la referencia usa nuestras reglas de posición, tamaño y relaciones, no las respuestas de la cátedra (el benchmark no las trae). Run local sobre las 20 imágenes del benchmark (OWLv2 + SAM2 tiny), modo determinista: **72,5 %** de coincidencia con el oráculo en las 40 cerradas (count 40 %, existence 90 %, position 100 %, relation 80 %, size 60 %), evidencia y re-ejecución 100 %, los 11 errores son de percepción.
 
 ## LLM
 
-### [ ] E1-25 · Carga del LLM y benchmark de recursos — LLM
+### [x] E1-25 · Carga del LLM y benchmark de recursos — LLM
 - **Objetivo:** `llm/model.py`: carga configurable (Qwen2.5-3B-Instruct o Qwen3-4B; fp16 o 4-bit), generación con semilla fija y temperatura 0. Medir memoria y latencia en T4.
 - **Depende de:** E1-01
 - **Aceptación:** tabla de memoria y latencia por candidato en `docs/DECISIONS.md` con la elección justificada.
+- **En desarrollo (2026-10-24):** wrapper lazy para fp16/4-bit y `scripts/benchmark_llm.py`
+  implementados. **Medido en T4 (D-12):** Qwen2.5-3B fp16 6,0 GB y 5,3 s/consulta (elegido);
+  Qwen3-4B 4-bit 2,6 GB y 10,9 s.
 
-### [ ] E1-26 · Intérprete pregunta → DSL — LLM
+### [x] E1-26 · Intérprete pregunta → DSL — LLM
 - **Objetivo:** `llm/interpreter.py` con prompt few-shot versionado. Recibe **solo** el texto de la pregunta, produce JSON, valida contra el DSL, reintenta una vez ante error y, si vuelve a fallar, devuelve `unsupported`. El mapeo de la categoría lo hace E1-21, no el LLM.
 - **Depende de:** E1-25, E1-20, E1-21
 - **Aceptación:** validez del JSON ≥ 95 % y coincidencia del DSL con el del modo determinista medida sobre el benchmark; casos no soportados y ambiguos incluidos en los few-shot.
+- **En desarrollo (2026-10-24):** intérprete, prompt versionado, validación, resolución de
+  categorías por inyección y fallback implementados con tests. **Prompt v2 (D-18):** sin
+  categorías ni preguntas del benchmark y con ejemplos de todas las ops (incluido `describe`).
+  **Medido en T4:** JSON válido 1,00 y DSL igual al estructurado 1,00 en las 60 consignas
+  (con la v1: 0,65 y 0,65).
 
-### [ ] E1-27 · Verbalización y descripción — LLM
+### [x] E1-27 · Verbalización y descripción — LLM
 - **Objetivo:** `qa/verbalize.py` (respuesta en lenguaje natural a partir del resultado del ejecutor) y `llm/describer.py` (descripción a partir de un resumen textual compacto del SceneJSON). Verificador de fidelidad: cada categoría y número mencionado debe existir en el JSON.
 - **Depende de:** E1-25, E1-16
 - **Aceptación:** las 20 descripciones generadas, con la métrica de fidelidad calculada; se registran los casos con afirmaciones no sustentadas.
+- **En desarrollo (2026-10-24):** verbalización, resumen compacto, descriptor y verificador de
+  categorías/números implementados con tests. La fidelidad de las 20 descripciones la mide
+  `scripts/eval_qa.py` (`llm.descriptions`: proporción fiel, respaldos con la plantilla y consignas
+  que el intérprete no tomó como `describe`). **Medido en T4:** 18/20 descripciones fieles; las 2
+  restantes usan la plantilla determinista.
 
-### [ ] E1-28 · Integración de `questions_llm` — LLM
+### [x] E1-28 · Integración de `questions_llm` — LLM
 - **Objetivo:** genera `questions_llm` (con `interpreted_query`) y las descripciones para las 20 imágenes del benchmark mediante intérprete → mismo ejecutor → verbalización, e integra el resultado en el submission.
 - **Depende de:** E1-26, E1-27, E1-23
 - **Aceptación:** el submission valida con `questions_llm` completo; E1-24 se extiende al modo LLM.
+- **Nota (interfaz):** corrido en la T4 sobre las 20 imágenes del benchmark: modo LLM con exactitud contra el oráculo 0,725 (igual al determinista), evidencia y re-ejecución 100 %, submission válido con `questions_llm`. `scene/qa/llm_mode.py::answer_questions_llm(questions, scene, interpreter, executor, describer, names)`: el intérprete (E1-26) recibe solo `question`; su DSL lo ejecuta el mismo `Executor` de E1-22; si el intérprete falla o marca la pregunta como no soportada, se ejecuta `Query(op="unsupported", reason=...)`, así `interpreted_query` siempre es un DSL válido. `op="describe"` → `SceneDescriber` (E1-27); si la descripción no es fiel tras el reintento se usa la plantilla determinista (`status_detail` lo indica). Cada item lleva `interpreter` (estado, intentos, errores, salida cruda y estado del descriptor). `scripts/run_qa_llm.py --run <run>` agrega `questions_llm` a las escenas del benchmark (etapa `qa_llm` en la traza, `qa_llm.csv`); `eval_qa.py` evalúa los dos modos (validez del JSON, coincidencia del DSL con el estructurado y exactitud).
 
 ## Experimentación, análisis y entrega
 
-### [ ] E1-29 · Ajuste de umbral con tuning/holdout — EVA
+### [x] E1-29 · Ajuste de umbral con tuning/holdout — EVA
 - **Objetivo:** `scripts/tune_thresholds.py`: split fijo de 80/40 (estratificado, con semilla), barrido de umbral (y NMS entre clases) sobre la caché de detecciones crudas, selección en tuning y reporte en holdout.
 - **Depende de:** E1-07, E1-17
 - **Aceptación:** curva F1 vs. umbral guardada y valor elegido escrito en `base.yaml`, con su justificación.
+- **Nota (interfaz):** corrido en Kaggle: umbral **0,18** en `base.yaml` (D-14). `split_tuning_holdout` (estratificado por cantidad de instancias: se ordena y de cada grupo consecutivo va una imagen al holdout, con la semilla global), `sweep` y `choose` (máximo F1 en tuning; ante empate, el umbral más alto) en `eval/tuning.py`. `scripts/tune_thresholds.py` barre 0,02–0,50 con y sin NMS entre clases sobre la caché cruda (no corre modelos) y escribe `curve.csv`, `curve.png`, `split.json` y `summary.json` en `outputs/tuning/<hash>/`, con el F1 de holdout del umbral elegido y del actual.
 
-### [ ] E1-30 · Experimento controlado de mejora — EVA
+### [x] E1-30 · Experimento controlado de mejora — EVA
 - **Objetivo:** al menos una comparación contra la línea base cambiando una sola variable (candidatos: sinónimos en el vocabulario, detector alternativo, NMS entre clases, umbral por clase). Registro en `outputs/experiments.csv` con hipótesis, cambio, métricas de tuning y holdout, costo y conclusión. Si hace falta, implementar el detector alternativo (`detection/yolo_world.py` o `detection/gdino.py` con chunks).
 - **Depende de:** E1-29
 - **Aceptación:** mejora sobre holdout justificada (o, si no mejora, documentada); **F1 ≥ 0,50 en dev → hito H3** junto con E1-28 y E1-31.
+- **Nota:** dos comparaciones controladas contra la línea base, una variable cada una, decididas con el holdout de E1-29: (1) **umbral 0,10 → 0,18**, F1 de cajas en holdout 0,619 → 0,666, **adoptada** (D-14); (2) **post-proceso solo en máscaras chicas**, mejora con cajas GT (85,2 % vs 84,1 % con IoU ≥ 0,5) pero no end-to-end (F1 de máscaras en holdout 0,614 → 0,609), **descartada** (D-17). Herramientas: `configs/experiments/*.yaml`, `scripts/compare_runs.py` (tuning/holdout, por tamaño, consistencia y costo; fila en `outputs/experiments.csv`) y la variante `post_small` del oráculo. F1 de detección en dev 0,653 ≥ 0,50 (parte de H3).
 
-### [ ] E1-31 · Análisis de errores y propagación — EVA
+### [x] E1-31 · Análisis de errores y propagación — EVA
 - **Objetivo:** `eval/error_analysis.py`:
   - Embudo de instancias a partir de las trazas (raw → umbral → NMS → SAM2 → JSON) contra el GT.
   - Errores por tamaño y por clase.
@@ -208,21 +244,32 @@ Las referencias a campos del SceneJSON se resuelven siempre contra `data/competi
   - Atribución de errores de QA a percepción o a razonamiento usando el oráculo.
 - **Depende de:** E1-12, E1-24, E1-28
 - **Aceptación:** sección de notebook y `docs/error_analysis.md` con conclusiones que motivan la extensión de la Etapa 2.
+- **Nota:** percepción corrida en Kaggle sobre dev y conclusiones en `docs/error_analysis.md` (55,5 % de las instancias llega a TP de máscara; se pierden sobre todo en detección: 11,6 % sin caja, 8,4 % con otra clase, 16,6 % bajo el umbral; small 40 % vs ~72 % medium/large → motiva tiling tipo SAHI para la Etapa 2). La atribución de QA la da E1-24: en los dos modos los 11 errores sobre 40 cerradas son de percepción (6 de conteo, 1 existencia alucinada, 4 objetos no detectados). Falta solo la sección de notebook (E1-32). `eval/error_analysis.py`: `funnel_rows`/`funnel_summary` (primera etapa en la que se pierde cada instancia GT: `no_box` → `wrong_class` → `below_threshold` → `nms` → `max_detections` → `box_match` → `mask` → `ok`; las etapas de detección se recalculan desde la caché cruda con el mismo post-proceso y piden cobertura IoU ≥ 0,5, las dos últimas usan el matching federado), `fp_types` (duplicado, localización, confusión de clase, categoría negativa, fondo), `per_image_scores`, `pick_gallery` (correctas, ambiguas y fallidas, sin superposición), `draw_case` (GT verde, FN amarillo, TP azul, FP rojo, ignoradas gris) y `worst_classes`. `scripts/analyze_errors.py --run <run>` usa la config de inferencia del run y escribe `error_analysis/` (summary.json, funnel.csv, fp_types.csv, per_image.csv, worst_classes.csv, gallery/).
 
-### [ ] E1-32 · Generador de notebook y corrida en Kaggle — ENT
+### [x] E1-32 · Generador de notebook y corrida en Kaggle — ENT
 - **Objetivo:** `scripts/build_notebook.py` genera `TPI_IA_2026P_<grupo>.ipynb`: instalación, `%%writefile` de los módulos y secciones en Markdown (EDA, metodología, resultados, experimentos, análisis, submission). Separa claramente GT, predicciones y datos derivados.
 - **Depende de:** E1-31
 - **Aceptación:** corre de punta a punta en Kaggle con GPU y sin archivos externos; queda guardada con todas sus salidas; genera `submission.csv` y los CSV y JSON de métricas.
+- **Cierre (2026-10-24):** `TPI_IA_2026P_15.ipynb` se ejecutó completa en Kaggle sobre una
+  Tesla T4. La corrida de desarrollo `20261024-223716-6f583413` procesó 120 imágenes y la de
+  entrega `20261024-225121-6f583413` generó las 80 filas. La última celda validó la entrega y
+  produjo `grupo15_entrega_artifacts.zip` con métricas, trazas, manifiestos, análisis y submission.
 
-### [ ] E1-33 · Reporte técnico — ENT
+### [x] E1-33 · Reporte técnico — ENT
 - **Objetivo:** `report/REPORTE.md` con la estructura sugerida (portada, dataset, metodología, resultados, discusión y errores, conclusiones). Las tablas se generan desde los CSV del run final para garantizar correspondencia con la notebook. Declara modelos, recursos y código reutilizado.
 - **Depende de:** E1-32
 - **Aceptación:** cada número del reporte es trazable a un archivo del run final.
+- **Nota:** `scripts/build_report.py` valida el submission y genera `report/REPORTE.md` y
+  `report/report_data.json` desde `grupo15_entrega_artifacts.zip`. El snapshot conserva las cifras
+  usadas y el SHA-256 de cada JSON, CSV, manifiesto y traza de origen.
 
-### [ ] E1-34 · Verificación final de validez — ENT
+### [x] E1-34 · Verificación final de validez — ENT
 - **Objetivo:** checklist: el test de frontera pasa; la pipeline procesa una imagen externa al dataset sin errores; las semillas y el manifest están completos; el reporte coincide con la notebook; el submission es válido; el modelo LLM es ejecutable en Kaggle; el checklist de promoción del enunciado está cubierto punto por punto.
 - **Depende de:** E1-33
 - **Aceptación:** `docs/checklist_entrega.md` completado.
+- **Nota:** `scripts/validate_delivery.py` verifica notebook y reporte regenerables, hashes del ZIP,
+  manifests, semillas, GPU, trazas, métricas, schema y ambos modos de QA. El checklist separa las
+  verificaciones automáticas de las acciones humanas previas a la entrega y la defensa.
 
 ---
 

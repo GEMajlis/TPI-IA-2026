@@ -1,0 +1,109 @@
+{
+  "stage": "Etapa 1 - Promoción",
+  "group": {
+    "number": "15",
+    "course": "5K1",
+    "kaggle_team": "Grupo 15 - 5K1",
+    "members": [
+      {
+        "name": "Gonzalo Ezequiel Majlis",
+        "student_id": "95047"
+      },
+      {
+        "name": "Tomas Morinigo",
+        "student_id": "95639"
+      },
+      {
+        "name": "Ramiro Figueroa Manzi",
+        "student_id": "96306"
+      },
+      {
+        "name": "Franco Manuel Lucero",
+        "student_id": "96311"
+      }
+    ]
+  },
+  "run_ids": {
+    "dev": "20261024-223716-6f583413",
+    "submission": "20261024-225121-6f583413"
+  },
+  "checks": {
+    "artifact_snapshot_matches": {
+      "ok": true,
+      "evidence": "report/report_data.json coincide con los archivos y SHA-256 del ZIP final"
+    },
+    "notebook_reproducible": {
+      "ok": true,
+      "evidence": "notebooks/TPI_IA_2026P_15.ipynb coincide con scripts/build_notebook.py"
+    },
+    "notebook_name": {
+      "ok": true,
+      "evidence": "TPI_IA_2026P_15.ipynb"
+    },
+    "report_reproducible": {
+      "ok": true,
+      "evidence": "report/REPORTE.md coincide con scripts/build_report.py y report_data.json"
+    },
+    "submission_valid": {
+      "ok": true,
+      "evidence": "80 filas, ids/orden normativos y 0 errores de schema"
+    },
+    "submission_has_both_qa_modes": {
+      "ok": true,
+      "evidence": "20 escenas benchmark, 60 questions y 60 questions_llm"
+    },
+    "manifests_same_config": {
+      "ok": true,
+      "evidence": "6f583413dff25327896cf7448586051c84f8bc06c57f629d48f02ef079ec8166"
+    },
+    "seeds_recorded": {
+      "ok": true,
+      "evidence": "seed=42 en ambos manifests y en llm.seed"
+    },
+    "models_recorded": {
+      "ok": true,
+      "evidence": "OWLv2 y SAM2 en manifest; benchmark LLM sobre CUDA"
+    },
+    "kaggle_gpu_recorded": {
+      "ok": true,
+      "evidence": "Tesla T4 (14911 MiB)"
+    },
+    "dev_trace_complete": {
+      "ok": true,
+      "evidence": "480 registros, 120 imágenes y 0 errores"
+    },
+    "submission_trace_complete": {
+      "ok": true,
+      "evidence": "360 registros, 80 imágenes, QA en 20 escenas y 0 errores"
+    },
+    "promotion_detection_target": {
+      "ok": true,
+      "evidence": "F1 bbox=0.652952 >= 0.50"
+    },
+    "scene_consistency": {
+      "ok": true,
+      "evidence": "0 inconsistencias estructurales en el run de desarrollo"
+    },
+    "llm_contract": {
+      "ok": true,
+      "evidence": "JSON, DSL y evidencia válidos en el 100% del benchmark"
+    },
+    "controlled_experiment": {
+      "ok": true,
+      "evidence": "hipótesis, cambio único, holdout, costo y conclusión registrados"
+    }
+  },
+  "passed": true,
+  "test_commands": [
+    "pytest -q",
+    "pytest -q tests/test_import_boundary.py",
+    "pytest -q tests/test_pipeline_submission.py::test_pipeline_genera_escenas_validas_y_traza",
+    "ruff check .",
+    "ruff format --check ."
+  ],
+  "manual_actions": [
+    "Crear y aprobar el PR de desarrollo a main antes de entregar",
+    "Confirmar que la versión guardada de Kaggle sea visible para la cátedra",
+    "Preparar la defensa de hasta 10 minutos con participación de los cuatro integrantes"
+  ]
+}

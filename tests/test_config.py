@@ -67,7 +67,7 @@ def test_set_seed_reproducible() -> None:
 def test_start_run_crea_carpeta_y_manifest(base_cfg) -> None:
     ctx = start_run(base_cfg, run_id="test-run")
     assert ctx.run_dir.is_dir()
-    manifest = json.loads(ctx.manifest_path.read_text())
+    manifest = json.loads(ctx.manifest_path.read_text(encoding="utf-8"))
     assert manifest["run_id"] == "test-run"
     assert manifest["config_hash"] == config_hash(base_cfg)
     assert manifest["config"] == base_cfg
@@ -75,4 +75,6 @@ def test_start_run_crea_carpeta_y_manifest(base_cfg) -> None:
     assert manifest["packages"]["numpy"] == np.__version__
     assert manifest["hardware"]["device"] in {"cpu", "cuda"}
     ctx.update_manifest("models", {"detector": "google/owlv2-base-patch16-ensemble"})
-    assert json.loads(ctx.manifest_path.read_text())["models"]["detector"].startswith("google/")
+    assert json.loads(ctx.manifest_path.read_text(encoding="utf-8"))["models"][
+        "detector"
+    ].startswith("google/")
