@@ -211,9 +211,27 @@ def _pct(value: float, decimals: int = 1) -> str:
 
 
 def _tuning_section(tuning: dict[str, Any] | None) -> str:
-    """Párrafo y tabla de la mejora adoptada (umbral); vacío si el ZIP no trae el ajuste."""
+    """Párrafo y tabla de la mejora adoptada (umbral).
+
+    Si el ZIP no trae `outputs/tuning/`, se cita la medición registrada en D-14 (mismo detector,
+    mismo GT y mismo split con semilla 42: la curva es determinista).
+    """
     if tuning is None:
-        return ""
+        return """**Mejora adoptada: umbral de detección.** Sobre la caché de detecciones crudas se barrieron
+los umbrales 0,02 a 0,50; el de máximo F1 de cajas en tuning fue 0,18 (F1 0,646 en tuning). En holdout:
+
+| Configuración | Precisión | Recall | F1 de cajas | Predicciones por imagen |
+|---|---:|---:|---:|---:|
+| Línea base, umbral 0,10 | 0,550 | 0,708 | 0,619 | 57,5 (dev completo) |
+| **Umbral elegido, 0,18** | 0,719 | 0,620 | **0,666** | 28,2 |
+| Umbral elegido + NMS entre clases (IoU 0,8) | 0,721 | 0,620 | 0,667 | 28,1 |
+
+El umbral elegido **mejora el F1 de holdout en 4,7 puntos** frente a la línea base: cambia recall por
+precisión y reduce a la mitad las predicciones por imagen. El NMS entre clases no aporta y queda
+apagado. Medición registrada en `docs/DECISIONS.md` (D-14), corrida en Kaggle con
+`scripts/tune_thresholds.py`; se reproduce con ese script sobre el run de desarrollo.
+
+"""
     base, chosen = tuning["holdout_baseline"], tuning["holdout_chosen"]
     cross = tuning["holdout_cross"]
     rows = "\n".join(

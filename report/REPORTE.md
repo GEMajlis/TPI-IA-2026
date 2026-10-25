@@ -140,6 +140,20 @@ interpretación del LLM.
 Cada comparación cambia una sola variable respecto de la línea base y se decide con el holdout de
 40 imágenes (split estratificado con semilla 42), que no participa de la elección.
 
+**Mejora adoptada: umbral de detección.** Sobre la caché de detecciones crudas se barrieron
+los umbrales 0,02 a 0,50; el de máximo F1 de cajas en tuning fue 0,18 (F1 0,646 en tuning). En holdout:
+
+| Configuración | Precisión | Recall | F1 de cajas | Predicciones por imagen |
+|---|---:|---:|---:|---:|
+| Línea base, umbral 0,10 | 0,550 | 0,708 | 0,619 | 57,5 (dev completo) |
+| **Umbral elegido, 0,18** | 0,719 | 0,620 | **0,666** | 28,2 |
+| Umbral elegido + NMS entre clases (IoU 0,8) | 0,721 | 0,620 | 0,667 | 28,1 |
+
+El umbral elegido **mejora el F1 de holdout en 4,7 puntos** frente a la línea base: cambia recall por
+precisión y reduce a la mitad las predicciones por imagen. El NMS entre clases no aporta y queda
+apagado. Medición registrada en `docs/DECISIONS.md` (D-14), corrida en Kaggle con
+`scripts/tune_thresholds.py`; se reproduce con ese script sobre el run de desarrollo.
+
 **Variante descartada: post-proceso de máscaras solo en objetos chicos.** Se cambió una sola variable: `apply_below_area_ratio: null -> 0.00333`. El F1 de máscaras en holdout pasó de
 0,614 a 0,609
 (-0.0054); aunque tuning mejoró
