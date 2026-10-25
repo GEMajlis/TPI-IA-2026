@@ -251,8 +251,8 @@ Las referencias a campos del SceneJSON se resuelven siempre contra `data/competi
 - **Depende de:** E1-31
 - **Aceptación:** corre de punta a punta en Kaggle con GPU y sin archivos externos; queda guardada con todas sus salidas; genera `submission.csv` y los CSV y JSON de métricas.
 - **Cierre (2026-10-24):** `TPI_IA_2026P_15.ipynb` se ejecutó completa en Kaggle sobre una
-  Tesla T4. La corrida de desarrollo `20261024-223716-6f583413` procesó 120 imágenes y la de
-  entrega `20261024-225121-6f583413` generó las 80 filas. La última celda validó la entrega y
+  Tesla T4. La corrida de desarrollo `20261025-183446-6f583413` procesó 120 imágenes y la de
+  entrega `20261025-184746-6f583413` generó las 80 filas. La última celda validó la entrega y
   produjo `grupo15_entrega_artifacts.zip` con métricas, trazas, manifiestos, análisis y submission.
 
 ### [x] E1-33 · Reporte técnico — ENT

@@ -158,8 +158,8 @@ apagado. Medición registrada en `docs/DECISIONS.md` (D-14), corrida en Kaggle c
 0,614 a 0,609
 (-0.0054); aunque tuning mejoró
 +0.0096, la variante se **descartó** porque empeoró el
-holdout. El costo de segmentación fue 127,1 s en la base y
-124,7 s en la variante. El oráculo sugería una mejora, pero el
+holdout. El costo de segmentación fue 125,4 s en la base y
+123,9 s en la variante. El oráculo sugería una mejora, pero el
 experimento end-to-end mostró que las cajas predichas cambian el efecto del post-proceso.
 
 **Intérprete LLM: prompt v1 → v2.** Con la percepción fija, el prompt v1 daba JSON válido en el
@@ -172,15 +172,15 @@ registrada en `docs/DECISIONS.md` (D-18).
 
 | Etapa del run dev | Registros | Tiempo acumulado (s) | Pico GPU trazado (MiB) | Errores |
 |---|---:|---:|---:|---:|
-| detection | 120 | 18,9 | 1299 | 0 |
+| detection | 120 | 16,7 | 1299 | 0 |
 | detection_postprocess | 120 | 0,1 | 1209 | 0 |
-| segmentation | 120 | 127,1 | 2671 | 0 |
-| scene | 120 | 60,4 | 1209 | 0 |
+| segmentation | 120 | 125,4 | 2671 | 0 |
+| scene | 120 | 54,1 | 1209 | 0 |
 
 La traza de desarrollo contiene 480 registros sobre 120 imágenes y
 0 errores. En el benchmark de tres prompts, Qwen2.5-3B usó
-5994 MiB y 5640 ms promedio; Qwen3-4B
-4-bit usó 2601 MiB pero 11471 ms, por
+5994 MiB y 5214 ms promedio; Qwen3-4B
+4-bit usó 2601 MiB pero 10742 ms, por
 lo que se eligió el primero.
 
 El submission final contiene 80 filas, 2271 objetos,
@@ -230,18 +230,18 @@ El reporte fue generado por `scripts/build_report.py`. El snapshot
 
 | Clave | Archivo dentro de `grupo15_entrega_artifacts.zip` | SHA-256 |
 |---|---|---|
-| `final_summary` | `outputs/final_summary.json` | `aed1127ca8dd35dd14cb6877a8ba7ff9e2f538cdf53f01b8279e28f667287e70` |
+| `final_summary` | `outputs/final_summary.json` | `340c96fff2943426da96630206180cba05436d81faca014e12488547a9227497` |
 | `eda` | `outputs/eda/eda_summary.json` | `dfd312d675421ece741b9d37a3fefc2a3faec1f7360222a0260725d6ca564e80` |
-| `detection` | `outputs/runs/20261024-223716-6f583413/metrics_detection.json` | `3f05719345b185b95203b9bc7620ab09b5b2d81ea2c205a36d5edef5e66d1974` |
-| `segmentation` | `outputs/runs/20261024-223716-6f583413/metrics_segmentation.json` | `80db72b22cf1ded681bc27d44bbc984f6565b4d49dce0158bcd68bf40c144465` |
-| `segmentation_oracle` | `outputs/runs/20261024-223716-6f583413/metrics_segmentation_oracle.json` | `11d6fe357cf50aab79908cd83384ae5d2750a60570c121d4d4c8e3471471f4c4` |
-| `scene` | `outputs/runs/20261024-223716-6f583413/metrics_scene.json` | `f3fa33a27a4a42fd2b199787d920b959a0d642d4d7ebea3c8a0bb70322b6e820` |
-| `qa` | `outputs/runs/20261024-225121-6f583413/metrics_qa.json` | `73e6cbac415e97400d1a4b28c35077aaa524f8b76bf48d378198bd8645f403f6` |
-| `error_analysis` | `outputs/runs/20261024-223716-6f583413/error_analysis/summary.json` | `0d8b184b3bfeb0e32724f6f064ed67ac9d48af5363adee475e5afb859be185eb` |
-| `experiment` | `outputs/experiments.csv` | `1ee57f65a2465c346503e86a1df6a10f032c44fa0d2deec612a763c7c9c61557` |
-| `llm_benchmark` | `outputs/llm_benchmark.json` | `b71b18c254ab096d7c42d2ebfed77fafc14261e8b57cb503b46d5720a599e56e` |
-| `dev_manifest` | `outputs/runs/20261024-223716-6f583413/run_manifest.json` | `25942eda3ffa787df0a5125d54d18a34b6dcd6d3a20e83ea034b08d4bc649012` |
-| `submission_manifest` | `outputs/runs/20261024-225121-6f583413/run_manifest.json` | `e66fbbea01f2e285b49743ad5f64895a430e4429796116d17c5bf31423646884` |
-| `dev_trace` | `outputs/runs/20261024-223716-6f583413/trace.jsonl` | `e90f2751b6bf2db4a1267fe62c591f6e4a2343e6072f81a2aedcb59af1d25569` |
-| `submission_trace` | `outputs/runs/20261024-225121-6f583413/trace.jsonl` | `6c7d9598dc7f44ac4b47bc3aa0c0295ec01dbd6d384f9ef34d148deaab68ae90` |
+| `detection` | `outputs/runs/20261025-183446-6f583413/metrics_detection.json` | `3f05719345b185b95203b9bc7620ab09b5b2d81ea2c205a36d5edef5e66d1974` |
+| `segmentation` | `outputs/runs/20261025-183446-6f583413/metrics_segmentation.json` | `80db72b22cf1ded681bc27d44bbc984f6565b4d49dce0158bcd68bf40c144465` |
+| `segmentation_oracle` | `outputs/runs/20261025-183446-6f583413/metrics_segmentation_oracle.json` | `9c00351d3e790fe50d069bd12f71d36b0a9f7d1327a743a7d881ae2eb69aa332` |
+| `scene` | `outputs/runs/20261025-183446-6f583413/metrics_scene.json` | `f3fa33a27a4a42fd2b199787d920b959a0d642d4d7ebea3c8a0bb70322b6e820` |
+| `qa` | `outputs/runs/20261025-184746-6f583413/metrics_qa.json` | `73e6cbac415e97400d1a4b28c35077aaa524f8b76bf48d378198bd8645f403f6` |
+| `error_analysis` | `outputs/runs/20261025-183446-6f583413/error_analysis/summary.json` | `e13e8d300d5b75407184138d2de3f160b31f0aa0372b27b66944fdce8287ef1b` |
+| `experiment` | `outputs/experiments.csv` | `b4f5b8f6a16b9be5573832497dcc6261cfc430be5c4f5055e97adf85d3366adb` |
+| `llm_benchmark` | `outputs/llm_benchmark.json` | `c32b0508523665ce2d18d909eed0f97da9a5438d9e91a1fa270766209cb7e494` |
+| `dev_manifest` | `outputs/runs/20261025-183446-6f583413/run_manifest.json` | `30dc56ee9a9773edceb66f6dd795fbd9d725a98b09bc6afac91d97acf3f65374` |
+| `submission_manifest` | `outputs/runs/20261025-184746-6f583413/run_manifest.json` | `0399fcf600953fd07426113f075fc32e3afacb0b5ef74b02c777e24e9362f9e9` |
+| `dev_trace` | `outputs/runs/20261025-183446-6f583413/trace.jsonl` | `da8934aa92060667ac3ad329a1fca565a3b4e1bded23d4cb615b6f0e987be9d4` |
+| `submission_trace` | `outputs/runs/20261025-184746-6f583413/trace.jsonl` | `3d430696d4d0e1d137521d9b164f7c1fd74adacb953934daf238b1ff67e5e3a1` |
 | `submission` | `submission.csv` | `b004322f70b2abc43008646932369948ff5036c7cca00b08157bdf6cc4a7696d` |

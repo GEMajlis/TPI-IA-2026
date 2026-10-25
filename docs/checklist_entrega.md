@@ -16,8 +16,8 @@ ruff format --check .
 
 Runs finales:
 
-- Desarrollo: `20261024-223716-6f583413` (120 imágenes).
-- Submission y QA: `20261024-225121-6f583413` (80 imágenes).
+- Desarrollo: `20261025-183446-6f583413` (120 imágenes).
+- Submission y QA: `20261025-184746-6f583413` (80 imágenes).
 - Hardware: Tesla T4 en Kaggle.
 
 ## Condiciones de validez
